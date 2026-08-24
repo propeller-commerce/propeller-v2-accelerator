@@ -1,0 +1,45 @@
+{
+  "_comment": "--cms=none: strip the CMS/Prepr wiring from the boilerplate's root layout. A TEXT PATCH, not a full-file copy, deliberately: the copy this replaced was frozen at the June boilerplate and silently missed the BaseCategoryProvider and initialLanguage work, so every --cms=none scaffold 500'd on every route and served the wrong language. A patch inherits future layout changes, and if the boilerplate edits one of these snippets the scaffolder fails loudly instead of shipping a stale layout.",
+  "replace": [
+    {
+      "find": "import Script from \"next/script\";\n",
+      "with": ""
+    },
+    {
+      "find": "import { getGlobal } from \"@/lib/cms\";\nimport { CmsAdapterProvider } from \"@propeller-commerce/propeller-v2-cms-react\";\nimport { PREPR_ENABLED } from \"@/lib/preprEvent\";\nimport PreprSegmentsSync from \"@/components/cms/PreprSegmentsSync\";\nimport PreprPreviewBar from \"@/components/cms/PreprPreviewBar\";\n",
+      "with": ""
+    },
+    {
+      "find": "// Prepr tracking pixel token. The pixel manages the __prepr_uid visitor cookie;\n// per-page content events are fired by <PreprTrack> (View for pages/posts, Tag\n// for category interest) so Prepr can attribute engagement to the visitor and\n// build behavioral segments. Only mounted when Prepr is the active CMS.\nconst PREPR_TRACKING_TOKEN = process.env.NEXT_PUBLIC_PREPR_TRACKING_TOKEN;\n\n",
+      "with": ""
+    },
+    {
+      "find": "  // Resolved server-side because only the server can reach the channel: the id\n  // is NEXT_PUBLIC_BASE_CATEGORY_ID when set, else `channel(...).catalogRootId`.\n  // Seeded to the client so components that fetch the menu themselves (every\n  // page rendering `<Header />` rather than `<HeaderServer />`) ask for the same\n  // category the server does, instead of guessing a literal.\n  const [globalData, cookieStore, baseCategoryId, initialLanguage, anonymousUserId] = await Promise.all([\n    getGlobal(),\n    cookies(),\n    resolveBaseCategoryId(),\n    // Same resolver every page uses, so `<html lang>` and the client\n    // provider can never disagree with what the page fetched.\n    resolveRequestLanguage(),\n    // Channel-only value, so the client cannot resolve it: it scopes logged-out\n    // listing queries to the channel's anonymous user, matching what the SSR\n    // seed already sends.\n    resolveAnonymousUserId(),\n  ]);\n",
+      "with": "  // No CMS in this shop, so there is no CMS \"global\" singleton — GlobalProvider\n  // is still mounted (Header/Footer call useGlobal()) and seeded with null.\n  const [cookieStore, baseCategoryId, initialLanguage, anonymousUserId] = await Promise.all([\n    cookies(),\n    // Resolved server-side because only the server can reach the channel: the id\n    // is NEXT_PUBLIC_BASE_CATEGORY_ID when set, else `channel(...).catalogRootId`.\n    // Seeded to the client so components that fetch the menu themselves ask for\n    // the same category the server does rather than guessing a literal.\n    resolveBaseCategoryId(),\n    // Same resolver every page uses, so `<html lang>` and the client\n    // provider can never disagree with what the page fetched.\n    resolveRequestLanguage(),\n    // Channel-only value, so the client cannot resolve it: it scopes logged-out\n    // listing queries to the channel's anonymous user, matching what the SSR\n    // seed already sends.\n    resolveAnonymousUserId(),\n  ]);\n"
+    },
+    {
+      "find": "        {PREPR_ENABLED && PREPR_TRACKING_TOKEN ? (\n          <Script id=\"prepr-tracking\" strategy=\"afterInteractive\">\n            {`!function(e,t,p,r,n,a,s){e[r]||((n=e[r]=function(){n.process?n.process.apply(n,arguments):n.queue.push(arguments)}).queue=[],n.t=+new Date,(a=t.createElement(p)).async=1,a.src=\"https://cdn.tracking.prepr.io/js/prepr_v2.min.js?t=\"+864e5*Math.ceil(new Date/864e5),(s=t.getElementsByTagName(p)[0]).parentNode.insertBefore(a,s))}(window,document,\"script\",\"prepr\"),prepr(\"init\",\"${PREPR_TRACKING_TOKEN}\"),prepr(\"event\",\"pageload\");`}\n          </Script>\n        ) : null}\n",
+      "with": ""
+    },
+    {
+      "find": "        {PREPR_ENABLED ? <PreprPreviewBar /> : null}\n        {/* CMS adapter for client islands' optional `useCms()`. nextDemo fetches\n            all CMS content server-side (Server Components call getPage/getArticle\n            directly), so no client adapter is supplied — `null` is the documented\n            value for server-fetched shops; `useCms()` returns null on the client. */}\n",
+      "with": ""
+    },
+    {
+      "find": "        <CmsAdapterProvider adapter={null}>\n",
+      "with": ""
+    },
+    {
+      "find": "            {PREPR_ENABLED ? <PreprSegmentsSync /> : null}\n",
+      "with": ""
+    },
+    {
+      "find": "              <GlobalProvider globalData={globalData}>\n",
+      "with": "              <GlobalProvider globalData={null}>\n"
+    },
+    {
+      "find": "        </CmsAdapterProvider>\n",
+      "with": ""
+    }
+  ]
+}

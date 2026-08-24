@@ -1,0 +1,11 @@
+{
+  "_comment": "Paths (relative to the scaffolded frontend/) to delete when mode === 'b2c'. The boilerplate ships every route by default; b2c shops trim the b2b-only ones.",
+  "remove": [
+    "app/account/authorization-requests",
+    "app/account/authorization-settings",
+    "app/account/price-requests",
+    "app/account/quote-requests",
+    "app/account/quotes",
+    "app/authorization-request-sent"
+  ]
+}

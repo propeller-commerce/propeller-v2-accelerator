@@ -1,0 +1,20 @@
+{
+  "name": "propeller-v2-accelerator",
+  "version": "0.4.0",
+  "private": true,
+  "description": "Scaffolding monorepo for Propeller Commerce shops. Contains create-propeller-shop CLI, two shop templates (Next + Vue), and CMS adapter packages.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "check:textpatches": "node scripts/check-textpatches.mjs",
+    "clean": "npm run clean --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "~5.9"
+  }
+}

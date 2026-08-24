@@ -1,0 +1,90 @@
+---
+title: Shop modes
+sidebar_position: 5
+---
+
+# Shop modes
+
+`--mode` is a scaffold-time choice. It changes:
+
+- Which **routes** are scaffolded into the shop.
+- The default **portal mode** (catalog visibility).
+- The **register form**'s `showUserType` prop.
+- A handful of feature flags in `propeller.json`.
+
+It does **not** change which UI package or composables ship — the surface
+is the same. The mode-dependent behaviour is gated at runtime via
+`deriveUserMode(user, shopMode)` from `propeller-v2-core-ui`.
+
+## The three modes
+
+| Mode | B2B account routes | Default portal | Register form | Company switcher |
+|---|---|---|---|---|
+| **`b2b`** | scaffolded | `semi-closed` | Contact only (picker hidden) | always visible for Contacts |
+| **`b2c`** | NOT scaffolded | `open` | Customer only (picker hidden) | hidden |
+| **`hybrid`** | scaffolded, runtime-gated | `open` | both (picker visible) | visible for Contacts, hidden for Customers |
+
+VAT toggle is **always present** and defaults to **gross** (`includeVAT:
+true`), regardless of mode.
+
+## B2B account routes
+
+The "B2B account routes" are:
+
+- `/account/quotes` — quote list + accept-quote flow.
+- `/account/quote-requests` — request-a-quote flow.
+- `/account/authorization-requests` — auth-required cart approval.
+- `/account/authorization-settings` — auth contact management.
+- `/account/price-requests` — manual price-quote requests.
+
+In **b2c**, these directories simply don't exist in the scaffolded tree
+— the framework's default 404 handles any visitor who guesses the URL.
+
+In **b2b** and **hybrid**, the directories exist. The hybrid mode adds
+a per-route `<RequireUserMode allow={['b2b']}>` (Next) or `requireUserMode`
+router guard (Vue) that returns `notFound()` for a Customer who somehow
+reaches the URL.
+
+## Why client-side gating
+
+The httpOnly JWT cookie carries the user's ID but **not** the user type.
+Middleware-level guards would need to decode the cookie + call the API
+on every request, just to know whether the user is a Contact or a
+Customer. Per-page client guards are simpler, equally secure (the API
+itself rejects unauthorised reads), and avoid the per-request overhead.
+
+## Hybrid runtime model
+
+Hybrid shops run `deriveUserMode(user, 'hybrid')` to reduce the user state
+to one of three runtime modes:
+
+- `'anonymous'` — no user logged in. Portal mode + visibility rules apply.
+- `'b2b'` — Contact logged in. B2B routes visible; company switcher shown.
+- `'b2c'` — Customer logged in. B2B routes 404; company switcher hidden.
+
+Components branch on `userMode === 'b2b'` rather than `isContact(user)`
+so the branching is uniform across modes.
+
+## Portal modes
+
+Independent from shop mode. Controls **catalog visibility** for
+anonymous visitors:
+
+- `open` — catalog browseable, prices visible. Login required for cart
+  + account.
+- `semi-closed` — catalog browseable, prices hidden. Login required to
+  see prices.
+- `closed` — catalog hidden entirely. Login required to see anything.
+
+Defaults are chosen per mode (b2b → `semi-closed`, b2c/hybrid → `open`)
+because B2B shops typically gate prices behind login.
+
+The Propeller backend enforces these rules too — the portal mode is a
+runtime UI hint, not a security boundary.
+
+## Changing mode after scaffolding
+
+`propeller migrate-mode <new-mode>` is reserved for Phase C. Until then,
+re-scaffold and copy your customisations across. The set of mode-specific
+files is small (the b2b-routes tree + a handful of substituted values
+in `data/config.ts` / `propeller.json`) so a manual migration is short.

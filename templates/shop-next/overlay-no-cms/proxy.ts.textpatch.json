@@ -1,0 +1,9 @@
+{
+  "_comment": "--cms=none: lib/cms is deleted, but proxy.ts is the locale-rewrite middleware (not CMS code) and imports one helper from it — `isHomeSlug`, used to redirect /home → /. Inline the helper (it's a pure string check over a fixed slug list, verbatim from lib/cms/core.ts) instead of deleting the middleware. The rest of proxy.ts's Prepr behaviour is gated on the NEXT_PUBLIC_CMS_PROVIDER env var, which a no-CMS shop never sets, so it stays inert without patching.",
+  "replace": [
+    {
+      "find": "import { isHomeSlug } from '@/lib/cms/core';",
+      "with": "// No CMS in this shop (scaffolded with --cms=none), so lib/cms is absent —\n// `isHomeSlug` is inlined here. Slugs that resolve to the site home page,\n// which is always served at `/`.\nconst HOME_SLUGS = ['home', 'home-personalized', 'index', 'home-generic'];\n\n/** True when a slug (with or without a leading slash) refers to the home page. */\nfunction isHomeSlug(slug: string): boolean {\n  const normalized = slug.replace(/^\\/+/, '').toLowerCase();\n  return normalized === '' || HOME_SLUGS.includes(normalized);\n}"
+    }
+  ]
+}

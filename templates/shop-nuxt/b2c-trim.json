@@ -1,0 +1,11 @@
+{
+  "_comment": "Paths (relative to the scaffolded frontend/) to delete when mode === 'b2c'. Nuxt's file-based routing auto-detects routes from the pages tree, so deleting the file is enough — no router patch needed.",
+  "remove": [
+    "app/pages/account/authorization-requests.vue",
+    "app/pages/account/authorization-settings.vue",
+    "app/pages/account/price-requests.vue",
+    "app/pages/account/quote-requests",
+    "app/pages/account/quotes",
+    "app/pages/authorization-request-sent"
+  ]
+}

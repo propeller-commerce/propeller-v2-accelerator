@@ -1,0 +1,6 @@
+{
+  "_comment": "Paths (relative to the scaffolded shop root = the boilerplate's frontend/) to delete when --punchout=no (the default). Unlike the PSP opt-out, punchout CAN be fully removed on Vue: server.js's punchout import + route block is one self-contained span (patched out by overlay-no-punchout/server.js.textpatch.json), so the glue module here goes with it. The package dep is dropped by package.patch.json; the CartView transfer form is patched out.",
+  "remove": [
+    "src/server/punchout.js"
+  ]
+}

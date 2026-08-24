@@ -1,0 +1,9 @@
+{
+  "_comment": "Paths (relative to the scaffolded shop root) to delete when psp === null (--psp=none). The boilerplate ships BOTH payment integrations (Mollie + MultiSafepay) and activates one at runtime via PAYMENT_PROVIDER; a shop with no PSP needs neither. Removed: the Nitro route handlers and the server-side provider wiring — i.e. every file that imports a PSP npm package. NOT removed: app/utils/payments.ts (its `isOnAccountMethod` + `activePspProvider` are what the checkout uses to take the no-PSP path — with the env keys gone, activePspProvider() returns null and checkout places the order straight to NEW) and the mollie*/msp* keys in nuxt.config.ts's runtimeConfig, which are inert empty strings with no reader. The PSP packages themselves are dropped from package.json by overlay-psp-none/package.patch.json.",
+  "remove": [
+    "server/api/mollie",
+    "server/api/msp",
+    "server/utils/mollie.ts",
+    "server/utils/msp.ts"
+  ]
+}

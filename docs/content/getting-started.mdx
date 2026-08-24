@@ -1,0 +1,89 @@
+---
+title: Getting started
+sidebar_position: 2
+---
+
+# Getting started
+
+## Prerequisites
+
+- **Node.js >= 18**. The CLI is published as ESM; older runtimes won't
+  start it.
+- **npm** (or any compatible package manager). Yarn / pnpm work for the
+  generated shop; the CLI itself uses npm internally for the `npm
+  install` step.
+- **git** is optional but recommended — the CLI runs `git init` +
+  initial commit when present.
+
+## Scaffold a shop
+
+The fastest path:
+
+```bash
+npx create-propeller-shop@latest my-shop \
+  --stack=next \
+  --mode=hybrid \
+  --cms=strapi \
+  --psp=mollie \
+  --spare-parts=no \
+  --yes
+```
+
+`--psp` picks the payment provider (`mollie`, `multisafepay` or `none`) — the
+other provider's package and route handlers are removed from the shop.
+`--spare-parts=no` drops the `/machines` section. Both are asked interactively
+when omitted; see the [CLI reference](/cli#flags).
+
+`--yes` skips every interactive prompt by accepting the recommended
+default. Drop it (or omit individual flags) to get a guided flow with
+about ten prompts.
+
+The result lands at `./my-shop/`:
+
+```
+my-shop/
+  frontend/                 # the runnable shop
+  cms/                      # CMS install instructions (you install the CMS yourself)
+```
+
+(`public_html/` is **not** used — that segment was dropped in `0.3.2`.)
+
+## Run the dev server
+
+```bash
+cd my-shop/frontend
+cp .env.example .env.local      # fill in API URL + AUTH_SECRET + CMS_URL
+npm run dev
+```
+
+The Next template serves at `http://localhost:3000`. The Vue template
+serves at `http://localhost:5173`.
+
+## Verify the shop is healthy
+
+```bash
+# from anywhere inside the shop
+npx propeller doctor
+```
+
+`doctor` re-reads the manifest at `frontend/propeller.json` and checks
+that:
+
+- The pinned packages are installed.
+- `data/config.ts` declares the right portal mode.
+- The B2B route tree exists if (and only if) the mode says it should.
+- The declared CMS adapter is installed.
+
+Green checks + zero red = healthy shop. See [doctor](/doctor) for the
+full rule list and exit semantics.
+
+## Read next
+
+- **[CLI reference](/cli)** — every flag, every prompt, defaults per
+  mode.
+- **[Shop modes](/shop-modes)** — what changes when you flip
+  `--mode=b2b` vs `--mode=b2c` vs `--mode=hybrid`.
+- **[Templates](/templates)** — what files come out of `shop-next` /
+  `shop-vue`, and which ones are mode-specific.
+- **[CMS](/cms)** — the adapter pattern, Strapi setup, shops without a
+  CMS.

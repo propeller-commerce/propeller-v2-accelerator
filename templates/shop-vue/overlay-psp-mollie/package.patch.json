@@ -1,0 +1,6 @@
+{
+  "_comment": "--psp=mollie: drop the MultiSafepay package (the Mollie one stays).",
+  "dependencies": {
+    "@propeller-commerce/propeller-v2-msp": null
+  }
+}

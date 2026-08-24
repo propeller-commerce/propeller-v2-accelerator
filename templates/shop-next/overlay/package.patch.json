@@ -1,0 +1,6 @@
+{
+  "name": "{{shopName}}",
+  "scripts": {
+    "doctor": "npx -y -p @propeller-commerce/create-propeller-shop propeller doctor"
+  }
+}

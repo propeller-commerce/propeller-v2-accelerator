@@ -1,0 +1,67 @@
+---
+title: Introduction
+slug: /
+---
+
+# propeller-v2-accelerator
+
+A scaffolding monorepo for **Propeller Commerce** shops. Turns "new
+shop" into:
+
+> Pick a stack, pick a mode, pick a CMS, answer ~10 prompts, get a
+> working shop in minutes.
+
+The accelerator is a **scaffolder + templates**, not a runtime
+framework. Each scaffolded shop owns its code outright after scaffolding
+— you can diverge freely from the template, while still pulling in
+updates to the shared UI / CMS / SDK packages through normal npm
+dependency updates.
+
+## What's in the box
+
+| Piece | What it does |
+|---|---|
+| **`create-propeller-shop` CLI** | One-shot scaffolder. Answers prompts, copies the right template tree, writes a `propeller.json`, runs `npm install`, prints next steps. |
+| **`propeller` CLI** | Per-shop tools — `doctor` (validate the shop matches its manifest) and, in future, `upgrade` / `eject`. |
+| **`shop-next` template** | Next 16 + React 19 shop with all the routes, components, and config a runnable shop needs. |
+| **`shop-vue` template** | Vue 3 + Vite SSR shop with the same surface as the Next one. |
+| **`cms-adapter-strapi`** | Strapi v5 REST `CmsAdapter` implementation. |
+| **`cms-adapter-cms`** | Stub adapter for the generic Propeller CMS backend. |
+
+## Quick start
+
+```bash
+npx create-propeller-shop@latest my-shop \
+  --stack=next \
+  --mode=hybrid \
+  --cms=strapi \
+  --psp=mollie
+
+cd my-shop/frontend
+npm run dev
+```
+
+The companion CMS install lands in `my-shop/cms/` — see
+[Scaffolded layout](/scaffolded-layout) for the full tree.
+
+## Read next
+
+- **[Getting started](/getting-started)** — install, scaffold, and run.
+- **[CLI reference](/cli)** — flags, prompts, defaults.
+- **[Shop modes](/shop-modes)** — what `b2b` / `b2c` / `hybrid` actually
+  change.
+- **[Templates](/templates)** — what's shared, what's mode-specific.
+- **[CMS](/cms)** — adapter pattern, Strapi setup, no-CMS shops.
+- **[propeller.json schema](/propeller-json)** — the per-shop manifest.
+- **[doctor](/doctor)** — verify a shop matches its manifest.
+- **[Roadmap](/roadmap)** — what's deferred (`propeller upgrade`,
+  mode migration).
+
+## Status
+
+`v0.3.x` ships **scaffolding** end-to-end (CLI, both stacks, both CMS
+adapters, doctor). Upgrade (`propeller upgrade`) and mode migration
+(`propeller migrate-mode`) are sketched but deferred to Phase B / C —
+see [Roadmap](/roadmap). The `propeller.json` schema and
+`customisations.ejected` list are wired in from day one so the deferred
+work is non-breaking.

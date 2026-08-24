@@ -1,0 +1,11 @@
+{
+  "_comment": "Paths (relative to the scaffolded frontend/) to delete when mode === 'b2c'. The boilerplate ships every view by default; b2c shops trim the b2b-only ones. NOTE: trimming a view file leaves the router still importing it — propeller-vue's router names every view in an explicit `() => import('@/views/…')`, so the matching routes are removed by overlay-b2c/src/router/index.ts.textpatch.json. (This manifest previously claimed routes were folder-imported and deletion alone sufficed; it wasn't true — vue-tsc failed with TS2307 on all six views.)",
+  "remove": [
+    "src/views/account/AuthorizationRequestsView.vue",
+    "src/views/account/AuthorizationSettingsView.vue",
+    "src/views/account/PriceRequestsView.vue",
+    "src/views/account/QuoteRequestsView.vue",
+    "src/views/account/QuotesView.vue",
+    "src/views/account/QuoteDetailView.vue"
+  ]
+}

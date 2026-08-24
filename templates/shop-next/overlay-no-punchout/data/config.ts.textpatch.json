@@ -1,0 +1,13 @@
+{
+  "_comment": "--punchout=no: drop the CXML_SHARED_SECRET contact track attribute (only punchout reads it) and remove the config.punchout mapping block.",
+  "replace": [
+    {
+      "find": "  contactTrackAttributes: ['CXML_SHARED_SECRET'],",
+      "with": "  contactTrackAttributes: [],"
+    },
+    {
+      "find": "  /**\n   * PunchOut (OCI + cXML). Non-secret, structured config only — the enable\n   * flag, shared secrets and buyer contact ids live in server env\n   * (`PUNCHOUT_ENABLED`, `PUNCHOUT_CXML_BUYERS`), read in `lib/punchout.ts`.\n   *\n   * `ociMapping` / `cxmlMapping` deep-merge over the package's\n   * `DEFAULT_OCI_MAPPING` / `DEFAULT_CXML_MAPPING` — the single place a\n   * deployment re-points, renames, or drops (`null`) an output field without\n   * forking the package. See the propeller-v2-punchout README for the rule shape.\n   */\n  punchout: {\n    /** ISO currency code emitted in OCI CURRENCY / cXML <Money currency>. */\n    currency: 'EUR',\n    /** Cart-transfer form target: '_self' | '_top' | '_parent' (frame it? use _top). */\n    transferTarget: '_self' as '_self' | '_top' | '_parent',\n    // ponytail: fresh-cart-on-entry not enforced yet — transfer works on any\n    // cart. Add a startCart in /api/punchout/enter if a buyer must not carry a\n    // prior non-punchout cart into the session.\n    freshCartOnEntry: false,\n    ociMapping: {} as Record<string, unknown>,\n    cxmlMapping: {} as Record<string, unknown>,\n  },\n",
+      "with": ""
+    }
+  ]
+}

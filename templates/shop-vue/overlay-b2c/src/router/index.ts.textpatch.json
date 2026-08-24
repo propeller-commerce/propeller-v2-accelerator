@@ -1,0 +1,13 @@
+{
+  "_comment": "--mode=b2c: b2c-trim.json deletes the B2B account views, but propeller-vue's router imports each view explicitly (the manifest's old claim that routes are 'folder-imported' was wrong), so the routes have to go too — otherwise vue-tsc fails with TS2307 on six missing modules and the build never compiles. Surgical patches so the rest of the router tracks the boilerplate.",
+  "replace": [
+    {
+      "find": "            { path: 'quotes', name: 'account-quotes', component: () => import('@/views/account/QuotesView.vue') },\n            { path: 'quotes/:id', name: 'account-quote-detail', component: () => import('@/views/account/QuoteDetailView.vue') },\n            { path: 'quote-requests', name: 'account-quote-requests', component: () => import('@/views/account/QuoteRequestsView.vue') },\n            { path: 'quote-requests/:id', name: 'account-quote-request-detail', component: () => import('@/views/account/QuoteDetailView.vue') },\n",
+      "with": ""
+    },
+    {
+      "find": "            { path: 'authorization-requests', name: 'account-authorization-requests', component: () => import('@/views/account/AuthorizationRequestsView.vue') },\n            { path: 'authorization-settings', name: 'account-authorization-settings', component: () => import('@/views/account/AuthorizationSettingsView.vue') },\n",
+      "with": ""
+    }
+  ]
+}

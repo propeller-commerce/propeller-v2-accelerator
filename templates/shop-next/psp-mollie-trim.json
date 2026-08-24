@@ -1,0 +1,7 @@
+{
+  "_comment": "Paths to delete when psp === 'mollie': the MultiSafepay half of the boilerplate's two-PSP surface. Its npm package is dropped from package.json by overlay-psp-mollie/package.patch.json. Nothing outside these files imports them — the Next PSP routes take `isOnAccountMethod` from the provider-agnostic lib/payments.ts, so the two providers are independent here.",
+  "remove": [
+    "app/api/msp",
+    "lib/msp.ts"
+  ]
+}

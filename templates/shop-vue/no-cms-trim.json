@@ -1,0 +1,8 @@
+{
+  "_comment": "Paths (relative to the scaffolded shop root) to delete when cms === null (--cms=none). Unlike propeller-next, propeller-vue ships NO real CMS integration — no bundled Strapi app, no lib/cms, no CMS providers, no CMS store/composable. The CMS surface is just three placeholder views (a catch-all CMS page + a blog list/detail) plus the shared CmsFallback they render while no backend is wired up. A no-CMS shop deletes all four; CmsFallback is imported ONLY by those three views, so it is dead code once they go. The only file that REFERENCES the deleted views is src/router/index.ts (the blog routes + the `:slug+` cms-page catch-all), which is patched surgically via src/router/index.ts.textpatch.json in overlay-no-cms/ (it was a whole-file overlay until 2026-07-24 and drifted). AppHeader.vue / AppFooter.vue mention CMS only in comments and env-var fallbacks (no imports) — left untouched.",
+  "remove": [
+    "src/views/CmsPageView.vue",
+    "src/views/blog",
+    "src/components/layout/CmsFallback.vue"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "_comment": "--punchout=no: strip the PunchoutTransfer button, the punchout-active cookie read, and unwrap the CartSummary/ActionCode from its !punchoutActive guard back to a plain `cart &&`.",
+  "replace": [
+    {
+      "find": "import PunchoutTransfer from '@/components/PunchoutTransfer';\n",
+      "with": ""
+    },
+    {
+      "find": "  // In a PunchOut session the cart is a transfer-only surface — the normal\n  // checkout / quote / action-code paths don't apply (the buyer sends the cart\n  // back to their procurement system). Gated on `mounted` so SSR + first client\n  // render match (the flag cookie is only readable in the browser).\n  const punchoutActive =\n    mounted && /(?:^|;\\s*)punchout_active=/.test(document.cookie);\n\n",
+      "with": ""
+    },
+    {
+      "find": "                <PunchoutTransfer />\n                {!punchoutActive && cart && (",
+      "with": "                {cart && ("
+    }
+  ]
+}

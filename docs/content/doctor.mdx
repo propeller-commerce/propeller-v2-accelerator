@@ -1,0 +1,91 @@
+---
+title: propeller doctor
+sidebar_label: doctor
+sidebar_position: 4
+---
+
+# `propeller doctor`
+
+Sanity-check a scaffolded shop. Reads `frontend/propeller.json` (or the
+file at the given path) and verifies the shop matches what the manifest
+declares.
+
+```bash
+# from the shop root
+npx propeller doctor
+
+# or from inside frontend/
+cd frontend && npx propeller doctor
+```
+
+## What it checks
+
+| # | Check | Level |
+|---|---|---|
+| 1 | `propeller.json` parses + validates against the Zod schema | red on failure |
+| 2 | Every declared `propeller-v2-*` package resolves against `node_modules/` | yellow on missing |
+| 3 | `data/config.ts` (Next) or `src/lib/config.ts` (Vue) contains the declared `portalMode` literal | red on mismatch |
+| 4 | B2B route shape matches mode (B2B routes present iff `mode !== 'b2c'`) | red on mismatch |
+| 5 | Declared CMS adapter (`cms.adapter`) is installed | yellow on missing |
+
+### Levels
+
+- **Green (✓)** — passed.
+- **Yellow (!)** — warning. Worth fixing but not a blocker.
+- **Red (✗)** — failure. Exits with code 1.
+
+### Exit code
+
+- `0` — zero red checks. Any number of yellows is still a pass.
+- `1` — at least one red check.
+
+Use this in CI to gate merges:
+
+```yaml
+- run: npx propeller doctor
+```
+
+## Manifest resolution
+
+`doctor` searches for `propeller.json` in this order:
+
+1. `./propeller.json`
+2. `./frontend/propeller.json`
+
+So you can run it from either the shop root or `frontend/`. If neither
+exists, the run fails with a single red `propeller.json not found …`
+finding.
+
+## Why declared-not-installed is yellow
+
+The CMS adapter packages are not yet published to npm. At scaffold
+time the CLI declares `cms.adapter` in `propeller.json` but does **not**
+pin a corresponding package — the user installs it manually (the
+scaffolded `cms/README.md` has the instructions). `doctor` surfaces the
+gap as a warning so the omission isn't silent, but doesn't block the
+shop's build.
+
+Once the adapter packages land on npm and the templates pin them, this
+check will be promoted back to red.
+
+## Sample output
+
+```text
+✓ propeller.json valid (v1, my-shop, hybrid).
+✓ propeller-v2-react-ui installed.
+✓ propeller-sdk-v2 installed.
+! propeller-v2-cms-adapter-strapi declared but not installed — install manually.
+✓ portalMode 'open' matches data/config.ts.
+✓ B2B route presence matches mode=hybrid.
+
+All checks passed.
+```
+
+## Roadmap
+
+- `propeller doctor --json` — machine-readable findings for CI tooling.
+- `--strict` flag to treat yellow as red.
+- Pin-drift check — flag installed package versions that don't match
+  the version stamped into `propeller.json -> dependencies`.
+
+Until those land, `doctor` is intentionally small and stable.

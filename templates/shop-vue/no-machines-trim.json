@@ -1,0 +1,7 @@
+{
+  "_comment": "Paths (relative to the scaffolded shop root) to delete when --spare-parts=no. The boilerplate ships a contact-only spare-parts browser at /machines (driven by the company's MY_INSTALLATIONS attribute); a shop that doesn't sell spare parts has no use for it. The view and its helper module are the whole surface here — the three files that REFERENCE them (router, header nav, config block) are patched surgically via overlay-no-machines/. `companyTrackAttributes: ['MY_INSTALLATIONS']` stays in config: it only makes the viewer query ask for one extra attribute, and leaving it keeps the diff off a line other features may grow into.",
+  "remove": [
+    "src/views/MachinesView.vue",
+    "src/lib/machines.ts"
+  ]
+}

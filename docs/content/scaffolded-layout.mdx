@@ -1,0 +1,83 @@
+---
+title: Scaffolded layout
+sidebar_position: 8
+---
+
+# Scaffolded layout
+
+What you get after `create-propeller-shop my-shop`:
+
+```
+my-shop/
+  frontend/             # ← the runnable shop
+    propeller.json      # ← the shop manifest, read by `propeller doctor`
+    package.json
+    .env.example
+    .env.local          # ← gitignored; fill in
+    README.md
+    next.config.ts      # (Next) or  vite.config.ts (Vue)
+    app/                # (Next)
+    src/                # (Vue)
+    components/         # (Next)
+    public/             # (Next)
+    …
+  cms/                  # ← CMS install lives here
+    README.md           # per-adapter install instructions
+```
+
+**No `public_html/`.** That segment was a cPanel-era holdover and was
+dropped in `0.3.2`.
+
+## `frontend/`
+
+The runnable shop. Everything you'd commit and deploy.
+
+- `propeller.json` is the **shop manifest** — see
+  [propeller.json schema](/propeller-json). `propeller doctor`
+  resolves it from `./` or `./frontend/`.
+- `package.json` pins the major Propeller UI packages at the version
+  the CLI was at scaffold time. No `^` ranges — reproducibility is the
+  rule for now.
+- `.env.example` lists every env var the shop reads. `.env.local` is
+  gitignored; copy `.env.example` to `.env.local` and fill in the
+  values before the first `npm run dev`.
+
+## `cms/`
+
+The companion CMS install. **Not** wired by the CLI — you install the
+CMS (Strapi / Propeller CMS / something custom) yourself in this
+folder. The CLI writes a `cms/README.md` with per-adapter instructions:
+
+- For `--cms=strapi`: `npx create-strapi-app@latest .` and the env-var
+  list the frontend expects.
+- For `--cms=cms`: link to the Propeller CMS install guide.
+- For `--cms=none`: instructions for adding a CMS later.
+
+The CMS folder is a sibling of `frontend/` so the shop can deploy both
+behind one origin without subdirectory routing — a typical layout
+proxies `/admin` and `/api/cms` to the CMS container.
+
+## What's NOT scaffolded
+
+- **No `Dockerfile`.** Deployment story is shop-specific. The Propeller
+  default-deployment templates ship separately.
+- **No CI config** (`.gitlab-ci.yml`, `.github/workflows`). Same reason
+  — shops vary too much for a useful default.
+- **No Playwright / Vitest config beyond what the framework default
+  ships.** Add your own when you start writing tests.
+- **No analytics, error tracking, or feature-flag wiring.** Pluggable
+  — wire whatever you use (PostHog, Sentry, GrowthBook, …) in your own
+  `app/providers.tsx` (Next) / `src/main.ts` (Vue).
+
+## What you should change first
+
+In rough order:
+
+1. Fill in `.env.local`.
+2. Pick a brand colour and replace the placeholder in
+   `data/config.ts` → `theme`.
+3. If `--cms != none`: install the adapter (see [CMS](/cms)).
+4. Run `npm run dev` and click through the catalog.
+5. Run `npx propeller doctor` to verify the shop matches its manifest.
+
+After that you're scaffolded — diverge freely.

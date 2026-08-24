@@ -1,0 +1,6 @@
+{
+  "_comment": "Paths (relative to the scaffolded shop root) to delete when --spare-parts=no. The boilerplate ships a contact-only spare-parts browser at /machines (driven by the company's MY_INSTALLATIONS attribute); a shop that doesn't sell spare parts has no use for it. Only the route goes. NOT removed: lib/machines.ts — `lib/server.ts` imports `readAttributeStringValues` from it and re-exports `MACHINE_MAX_DEPTH`, so deleting it fails the build. Nor the machine fetch helpers in lib/server.ts or the `machines` block in data/config.ts: they're welded into 1000-line shared files, they're inert with no page to call them (the source env var is stripped from the env example), and cutting them out would need a patch that breaks on every unrelated edit to those files. The nav entry is removed by overlay-no-machines/.",
+  "remove": [
+    "app/machines"
+  ]
+}

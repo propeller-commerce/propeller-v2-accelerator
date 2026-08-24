@@ -1,0 +1,125 @@
+---
+title: propeller.json schema
+sidebar_label: propeller.json
+sidebar_position: 9
+---
+
+# `propeller.json` schema
+
+The scaffolded shop's identity card. Lives at
+**`frontend/propeller.json`**. Owned by the shop. Edited rarely. Read by:
+
+- **`propeller doctor`** — verify pinned versions + config drift.
+- **The shop's own runtime** — `data/config.ts` (Next) or
+  `src/lib/config.ts` (Vue) reads `shop.mode` etc. at boot to populate
+  the `<PropellerProvider>`.
+- **`propeller upgrade`** (Phase B, deferred) — reads `template.version`
+  and `customisations.ejected` to decide what to apply.
+
+## Shape
+
+```ts
+{
+  $schema?: string,
+  template: {
+    name: string,            // e.g. "propeller-shop-template-next"
+    version: string,         // semver at scaffold time
+    stack: 'next' | 'vue',
+  },
+  shop: {
+    name: string,
+    mode: 'b2b' | 'b2c' | 'hybrid',
+    locales: string[],        // BCP-47, non-empty
+    defaultLocale: string,
+    currency: string,         // display symbol "€"
+    currencyCode: string,     // ISO 4217 "EUR" (length 3)
+    portalMode: 'open' | 'semi-closed' | 'closed',
+    siteUrl: string,          // valid URL, no trailing slash
+  },
+  features: {
+    quotes: boolean,
+    authorization: boolean,
+    favorites: boolean,
+    clusters: boolean,
+    search: boolean,
+    contacts: boolean,
+    spareParts: boolean,      // false when scaffolded with --spare-parts=no
+  },
+  cms: {
+    adapter: 'strapi' | 'cms' | null,
+    endpoint: string,         // typically "${CMS_URL}"
+    preview: boolean,
+  },
+  payments: {
+    provider: 'mollie' | 'multisafepay' | null,  // --psp; null = no PSP
+  },
+  customisations: {
+    ejected: string[],         // paths relative to frontend/
+  },
+}
+```
+
+Authoritative source: [`packages/cli/src/schema/propellerJson.ts`](https://github.com/propeller-commerce/propeller-v2-accelerator/blob/master/packages/cli/src/schema/propellerJson.ts).
+
+## Feature flags
+
+Each flag says "this whole route tree is in use". The future
+`propeller upgrade` reads them to decide which sub-trees to diff
+against. At runtime they're advisory — they don't (yet) tree-shake
+unused routes.
+
+For `mode === 'b2c'`, the B2B-flavoured flags
+(`quotes`/`authorization`/`contacts`) default to `false`. For
+`mode === 'hybrid'`, they default to `true` and are gated at runtime by
+`userMode`.
+
+`spareParts` is different from the rest: it is not advisory. `--spare-parts=no`
+physically deletes the `/machines` pages and helpers and unlinks the route from
+the header nav, so a `false` here means those files are absent from the shop.
+`payments.provider` is likewise a record of what was installed — the unchosen
+PSP's package and route handlers are removed at scaffold time.
+
+Both fields have defaults (`spareParts: true`, `payments: { provider: null }`),
+so a `propeller.json` written before they existed still validates.
+
+## `customisations.ejected`
+
+Phase B (`propeller upgrade`) will skip diffs for any file path listed
+here. v0.1 reserves the field; nothing reads it yet. Adding paths now
+is fine — the upgrade tool will pick them up when it ships.
+
+## Substitution variables
+
+The CLI builds a substitution context from the prompt answers and runs
+Handlebars over every `*.template.*` file in the template tree. The
+variables available inside templates:
+
+| Variable | Type | Source |
+|---|---|---|
+| `shopName` | string | `--name` |
+| `shopDescription` | string | derived from name |
+| `siteUrl` | URL | `--site-url` |
+| `siteHostname` | string | parsed from `siteUrl` |
+| `apiHostname` | string | parsed from `NEXT_PUBLIC_PROPELLER_API_URL` placeholder |
+| `stack` | `'next' \| 'vue'` | `--stack` |
+| `shopMode` | `'b2b' \| 'b2c' \| 'hybrid'` | `--mode` |
+| `isB2B` / `isB2C` / `isHybrid` | boolean | derived from `shopMode` |
+| `defaultLocale` | string | `--default-locale` |
+| `defaultLocaleLower` | string | lowercased |
+| `locales` / `localesArray` / `localesJsonArray` | various | `--locales` |
+| `currency` / `currencyCode` | string | `--currency-code` |
+| `portalMode` | `'open' \| 'semi-closed' \| 'closed'` | `--portal-mode` |
+| `portalModeConstant` | `OPEN \| SEMI_CLOSED \| CLOSED` | uppercase enum form |
+| `channelId`, `anonymousId`, `taxZone` | string | defaults from `data/defaults.ts` |
+| `cmsAdapter` | `'strapi' \| 'cms' \| null` | `--cms` |
+| `cmsAdapterTsValue` | string | `'null'` or `"'<adapter>'"` |
+| `cmsAdapterJsonValue` | string | `null` or `"<adapter>"` |
+| `cmsAdapterPackage` | string | `propeller-v2-cms-adapter-<adapter>` |
+| `cmsAdapterDisplay` | string | UI-friendly label |
+| `showUserType` | `'Contact' \| 'Customer' \| null` | derived from mode |
+| `featureQuotes` / `featureAuthorization` / `featureContacts` | boolean | derived from mode |
+| `templateVersion` | string | CLI version at scaffold time |
+
+Handlebars is run **only** on `*.template.*` files (suffix stripped on
+write) — everything else is verbatim. This avoids the Vue `{{ }}` /
+Handlebars `{{ }}` collision in regular `.vue` files.

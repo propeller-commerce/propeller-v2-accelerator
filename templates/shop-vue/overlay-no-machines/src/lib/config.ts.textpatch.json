@@ -1,0 +1,9 @@
+{
+  "_comment": "--spare-parts=no: drop the `machines` config block — its only readers (lib/machines.ts, MachinesView.vue) are deleted, and the env vars that feed it are stripped from .env.example. `configuration` is an untyped object literal, so removing the key is safe.",
+  "replace": [
+    {
+      "find": "  /**\n   * Spare-parts machines. `source` is the external system the ids in the\n   * `MY_INSTALLATIONS` company track attribute belong to (paired as\n   * `machine(source:, sourceId:)`). `language` is the language the machine TREE\n   * is authored in (usually EN) — distinct from the storefront language, which\n   * localizes the parts. Leave `source` unset to disable the machines root.\n   */\n  machines: {\n    source: (import.meta.env.VITE_BOILERPLATE_MACHINE_SOURCE as string | undefined) || undefined,\n    language:\n      (import.meta.env.VITE_BOILERPLATE_MACHINE_LANGUAGE as string | undefined) || 'EN',\n  },\n",
+      "with": ""
+    }
+  ]
+}

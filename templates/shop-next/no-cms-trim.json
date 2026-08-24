@@ -1,0 +1,20 @@
+{
+  "_comment": "Paths (relative to the scaffolded shop root) to delete when cms === null (--cms=none). The boilerplate ships a full CMS integration (Strapi/Prepr providers, block renderers, blog, CMS-driven page route, Prepr personalization) that a no-CMS shop doesn't use; the homepage falls back to the static <HomeFallback>. KEPT (not deleted): (1) components/cms/HomeFallback.tsx — the static homepage, not CMS code, zero CMS imports; (2) context/GlobalContext.tsx — Header/Footer call useGlobal() extensively, so the context stays but is REPLACED by a CMS-free stub from overlay-no-cms/ (decoupled from lib/cms, fed globalData={null}); (3) lib/preprEvent.ts — trackPreprEvent() is a personalization tracking seam still called by the surviving product-detail and checkout-thank-you pages; it NO-OPS when Prepr isn't configured, so it stays (removing it would break those two core files that the overlay does not replace). The five core files that merely REFERENCE cms (app/page.tsx, app/layout.tsx, app/category/[id]/[slug]/page.tsx, app/csr/category/[id]/[slug]/page.tsx, context/GlobalContext.tsx) are not deleted here — app/csr is deleted wholesale below, app/page.tsx + app/layout.tsx + GlobalContext.tsx are replaced by no-CMS variants from overlay-no-cms/, and the category page's CMS-banner lines are removed by overlay-no-cms/app/category/[id]/[slug]/page.tsx.textpatch.json (surgical, so the page otherwise tracks the boilerplate). blockRenderers.tsx + components/cms/blocks + DynamicBlockRenderer/PersonalizedPage are the dedicated CMS renderer surface — all imported only by each other or by the replaced layout, so they go. PreprTrack/PreprPreviewBar/PreprSegmentsSync (+ their lib/preprSegments helper) are Prepr-only widgets rendered only by the replaced layout/homepage, so they go too. app/api/preview + app/api/cms-revalidate (Prepr draft-mode and revalidation webhooks) are CMS-only endpoints and go; proxy.ts is NOT CMS-only (it is the locale-rewrite middleware) so its one @/lib/cms/core import is patched out by overlay-no-cms/proxy.ts.textpatch.json. The CMS npm deps (@propeller-commerce/propeller-v2-cms-react, @contentful/rich-text-*) are dropped from package.json by overlay-no-cms/package.patch.json and pruned from the lockfile by the CLI.",
+  "remove": [
+    "lib/cms",
+    "lib/preprSegments.ts",
+    "components/cms/DynamicBlockRenderer.tsx",
+    "components/cms/PersonalizedPage.tsx",
+    "components/cms/blockRenderers.tsx",
+    "components/cms/PreprTrack.tsx",
+    "components/cms/PreprPreviewBar.tsx",
+    "components/cms/PreprSegmentsSync.tsx",
+    "components/cms/blocks",
+    "app/(cms)",
+    "app/blog",
+    "app/csr",
+    "app/api/preview",
+    "app/api/cms-revalidate",
+    "cms"
+  ]
+}

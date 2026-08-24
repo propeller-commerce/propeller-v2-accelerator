@@ -1,0 +1,8 @@
+{
+  "_comment": "--cms=none: drop the CMS render package and the Contentful rich-text deps. Their only importers — lib/cms (Contentful provider), components/cms/blockRenderers + DynamicBlockRenderer, and app/layout.tsx — are trimmed or replaced by the no-CMS overlay, so nothing references them after scaffolding. `null` deletes the key (see jsonPatch.ts). The CLI also prunes these three from package-lock.json (CMS_PACKAGES in scaffold.ts) so `npm ci` doesn't reinstall them.",
+  "dependencies": {
+    "@propeller-commerce/propeller-v2-cms-react": null,
+    "@contentful/rich-text-html-renderer": null,
+    "@contentful/rich-text-types": null
+  }
+}

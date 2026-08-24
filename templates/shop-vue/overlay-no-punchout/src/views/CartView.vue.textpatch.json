@@ -1,0 +1,21 @@
+{
+  "_comment": "--punchout=no: remove the transfer form, unwrap CartSummary/ActionCode from their !punchoutActive guard, drop the punchoutActive ref + onMounted read, and prune the now-unused onMounted/ref imports. Anchor regenerated 2026-08-19: the block's hardcoded English became i18n (`t.punchoutIntro` / `t.punchoutTransfer`), which had silently staled this patch too.",
+  "replace": [
+    {
+      "find": "          <!-- PunchOut: hand the cart back to the buyer's procurement system.\n               Shown only in a punchout session (readable flag cookie set by\n               /api/punchout/enter). Native form POST — the server route builds\n               the OCI/cXML payload and returns a self-submitting form. -->\n          <form\n            v-if=\"punchoutActive && cartStore.cart?.cartId\"\n            method=\"POST\"\n            action=\"/api/punchout/transfer\"\n            class=\"rounded-lg border bg-card p-4\"\n          >\n            <p class=\"mb-3 text-sm text-muted-foreground\">\n              {{ t.punchoutIntro }}\n            </p>\n            <input type=\"hidden\" name=\"cartId\" :value=\"cartStore.cart.cartId\" />\n            <button\n              type=\"submit\"\n              class=\"w-full rounded-lg bg-primary px-6 py-3 text-primary-foreground transition hover:bg-primary/90\"\n            >\n              {{ t.punchoutTransfer }}\n            </button>\n          </form>\n",
+      "with": ""
+    },
+    {
+      "find": "v-if=\"!punchoutActive && cartStore.cart\"",
+      "with": "v-if=\"cartStore.cart\""
+    },
+    {
+      "find": "\n// PunchOut session flag — read after mount (SSR can't see document.cookie).\nconst punchoutActive = ref(false);\nonMounted(() => {\n  punchoutActive.value = /(?:^|;\\s*)punchout_active=/.test(document.cookie);\n});\n",
+      "with": ""
+    },
+    {
+      "find": "import { computed, onMounted, ref, watch } from \"vue\";",
+      "with": "import { computed, watch } from \"vue\";"
+    }
+  ]
+}

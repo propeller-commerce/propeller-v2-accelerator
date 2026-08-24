@@ -1,0 +1,13 @@
+{
+  "_comment": "No-CMS scaffold: the blog views and CmsPageView are deleted by no-cms-trim.json, so their routes have to go too — a dynamic import of a missing file breaks the build. Was a whole-file overlay until 2026-07-24; it silently drifted (kept routes for account views the boilerplate had since removed, and missed the new machines route). Surgical patches instead, so the rest of the router tracks the boilerplate and a stale anchor fails loudly at scaffold time. Anchors regenerated 2026-08-19 after boilerplate 1.11.8 added `meta: { ssrKey }` to the blog routes and broke the first one.",
+  "replace": [
+    {
+      "find": "        // Blog\n        { path: 'blog', name: 'blog', meta: { ssrKey: 'blog' }, component: () => import('@/views/blog/BlogView.vue') },\n        { path: 'blog/:slug', name: 'blog-post', meta: { ssrKey: 'blog-post' }, component: () => import('@/views/blog/BlogPostView.vue') },\n\n",
+      "with": ""
+    },
+    {
+      "find": "        // CMS catch-all (must be last child so it doesn't shadow named routes).\n        // Lives inside the :lang group, so /en/<slug> also resolves to a CMS page.\n        { path: ':slug+', name: 'cms-page', meta: { ssrKey: 'cms' }, component: () => import('@/views/CmsPageView.vue') },\n",
+      "with": "        // No-CMS build: the blog routes and the `:slug+` CMS catch-all are\n        // omitted (this shop was scaffolded with --cms=none).\n"
+    }
+  ]
+}

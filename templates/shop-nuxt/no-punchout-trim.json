@@ -1,0 +1,7 @@
+{
+  "_comment": "Paths (relative to the scaffolded shop root) to delete when --punchout=no (the default). Nitro is file-routed, so deleting the server/api/punchout/* handlers removes the endpoints cleanly; server/utils/punchout.ts is auto-imported but only the deleted routes use it, so it goes too. The package dep is dropped by overlay-no-punchout/package.patch.json; nuxt.config.ts runtimeConfig keys and the cart transfer form are patched out.",
+  "remove": [
+    "server/api/punchout",
+    "server/utils/punchout.ts"
+  ]
+}

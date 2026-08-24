@@ -1,0 +1,95 @@
+name: Build and Deploy Documentation
+
+# The docs site is a Docusaurus project under docs/. GitHub Pages' default
+# "deploy from a branch" mode runs Jekyll, which mis-parses Docusaurus MDX
+# (e.g. JS object literals with `{{ }}` look like Liquid tags). This workflow
+# builds the site properly with Docusaurus and deploys the output.
+#
+# Repo setting required once: Settings -> Pages -> Source = "GitHub Actions".
+#
+# This file lives in the GitLab source-of-truth repo and is mirrored to
+# GitHub by the GitLab CI `mirror_to_github` job.
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+# GitHub Pages allows only one deployment in flight per environment. When
+# two pushes land in quick succession the second deploy fails with
+# "Deployment request failed … due to in progress deployment". Cancelling
+# the older run on a newer push avoids the race; the newer commit is what
+# we want deployed anyway. Skip cancellation on PR runs so reviewers see
+# complete builds.
+concurrency:
+  group: pages-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # `npm install` (not `ci`) so the first build is resilient to the
+      # docs/package-lock.json being absent or out-of-date. Once a lockfile
+      # is committed, future runs are deterministic anyway.
+      - name: Install docs dependencies
+        working-directory: docs
+        run: npm install --no-audit --no-fund
+
+      - name: Build documentation site
+        working-directory: docs
+        run: npm run build
+
+      # Docusaurus output is static; .nojekyll stops GitHub Pages from
+      # re-running Jekyll over the built assets (notably _-prefixed files).
+      - name: Ensure .nojekyll
+        run: touch docs/build/.nojekyll
+
+      - name: Upload site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: docs/build
+
+  deploy-docs:
+    needs: build-docs
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Download site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

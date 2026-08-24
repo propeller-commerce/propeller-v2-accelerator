@@ -1,0 +1,11 @@
+{
+  "name": "propeller-shop-template-next",
+  "stack": "next",
+  "version": "0.2.0",
+  "description": "Next 16 + React shop template for Propeller Commerce.",
+  "propellerCompat": {
+    "propeller-v2-react-ui": ">=0.2.0",
+    "propeller-v2-core-ui": ">=0.2.0",
+    "propeller-v2-cms-react": ">=0.1.0"
+  }
+}

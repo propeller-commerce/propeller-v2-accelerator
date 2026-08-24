@@ -1,0 +1,9 @@
+{
+  "_comment": "No-CMS scaffold: the blog pages are removed, so drop the 'Blog' link from the footer Support column — otherwise it points at a 404.",
+  "replace": [
+    {
+      "find": "            <li>\n              <NuxtLink :to=\"localizeHref('/blog', languageStore.language)\" class=\"hover:text-white transition-colors\">Blog</NuxtLink>\n            </li>\n",
+      "with": ""
+    }
+  ]
+}

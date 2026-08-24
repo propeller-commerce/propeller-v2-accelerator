@@ -1,0 +1,107 @@
+---
+title: CMS
+sidebar_position: 7
+---
+
+# CMS
+
+Marketing content — rich pages at `/{slug}`, the blog, the homepage blocks,
+header/footer globals, and category banners — is powered by a CMS provider
+selected at **runtime** from the `CMS_PROVIDER` env var.
+
+**CMS is a Next-only capability.** Only the Next boilerplate ships a CMS engine
+(`lib/cms`, with every provider built in). The Vue and Nuxt boilerplates have no
+CMS subsystem, so `--cms=<x>` on a Vue or Nuxt scaffold prints a notice and
+proceeds with no CMS.
+
+> **There is no adapter package to install.** Every provider already ships in
+> the Next boilerplate's `lib/cms/providers/`. Selecting a CMS is just setting
+> `CMS_PROVIDER` (the scaffolder pre-sets it) plus the provider's credentials.
+> No code to wire, nothing to `npm install`.
+
+## Built-in providers
+
+| Provider | What it is |
+|---|---|
+| **`strapi`** | Self-hosted Strapi v5 REST provider. Full contract — pages (typed blocks), articles, category banners, a typed global, static-slug enumeration, image-URL resolution. Configured with `STRAPI_API_URL` (+ optional `STRAPI_API_TOKEN`). |
+| **`prepr`** | Hosted Prepr GraphQL provider. Same full contract. Introspects the Prepr environment's schema at runtime and builds its queries dynamically, so it adapts to rich vs simple content models. Authenticates with a GraphQL **token** embedded in the URL (`PREPR_ACCESS_TOKEN`) — no separate CMS URL. |
+| **`contentful`** | Hosted Contentful GraphQL provider. Same full contract. Reads via the Content Delivery API (or the Preview API for drafts); Rich Text fields are rendered to HTML. Authenticates with a **Space ID + Delivery API token** (`CONTENTFUL_SPACE_ID` + `CONTENTFUL_CDA_TOKEN`). SaaS-only — there is no self-hosted Contentful; the free tier suffices for a shop's marketing content. |
+| **`cms`** | Generic Propeller CMS backend. Selectable today; supply connection details per the generated `cms/README.md`. |
+| **`none`** | No CMS (default). Marketing slugs return 404 and the homepage falls back to its built-in static structure. |
+
+All providers implement the same `CmsProvider` contract (pages with typed
+blocks, blog articles, category banners, a typed global, static-slug
+enumeration, and image-URL resolution), so the shop's components are identical
+regardless of which backend is selected — only the `CMS_PROVIDER` env var and
+its credentials change.
+
+## How a scaffolded shop wires CMS
+
+`create-propeller-shop --cms=<provider>` does **three** things — and none of them
+install a package or touch the shop's code:
+
+1. Sets `propeller.json -> cms.adapter` to `'strapi'` / `'prepr'` /
+   `'contentful'` / `'cms'` / `null`.
+2. In the shop's `.env.local.example`, flips `CMS_PROVIDER=none` →
+   `CMS_PROVIDER=<provider>` (plus the `NEXT_PUBLIC_` mirror) and **uncomments
+   that provider's credential lines** so you can see exactly what to fill in.
+3. Writes `my-shop/cms/README.md` with backend-specific install/connect steps.
+
+To finish: copy `.env.local.example` → `.env.local` and fill in the provider
+credentials. To switch provider later, change `CMS_PROVIDER` (and keep
+`propeller.json -> cms.adapter` in sync so `propeller doctor` checks the right
+one). No re-scaffold or reinstall is needed.
+
+### Credentials per provider
+
+| Provider | Env vars uncommented |
+|---|---|
+| `strapi` | `STRAPI_API_URL`, `NEXT_PUBLIC_STRAPI_API_URL`, `STRAPI_API_TOKEN` |
+| `prepr` | `PREPR_ACCESS_TOKEN` |
+| `contentful` | `CONTENTFUL_SPACE_ID`, `CONTENTFUL_ENVIRONMENT`, `CONTENTFUL_CDA_TOKEN` (optional: `CONTENTFUL_CPA_TOKEN` + `CONTENTFUL_PREVIEW=true` for drafts) |
+| `cms` | — (supply connection details per `cms/README.md`) |
+
+## Homepage fallback
+
+The Propeller convention for a CMS-driven homepage: if the provider returns
+`null` for `getPage('home')` (or the page has no blocks), the shop renders a
+built-in `<HomeFallback>` instead. This lets a shop launch without a CMS and add
+one later without touching the homepage route.
+
+Non-homepage CMS slugs return 404 when the CMS is missing or the slug isn't
+found — there's no generic "page-not-found" fallback.
+
+## Adding a new provider
+
+Providers live in the Next boilerplate at `lib/cms/providers/` and are
+registered in the runtime switch in `lib/cms/index.ts`. Each implements the
+`CmsProvider` contract:
+
+```ts
+interface CmsProvider {
+  getPage(slug: string, options?: CmsPageOptions): Promise<CmsPage | null>;
+  getAllPageSlugs(): Promise<string[]>;
+  getGlobal(): Promise<CmsGlobal | null>;
+  getCategoryBanner(categoryId: string): Promise<CmsCategoryBanner | null>;
+  getArticles(): Promise<CmsArticle[]>;
+  getArticle(slug: string): Promise<CmsArticle | null>;
+  getAllArticleSlugs(): Promise<string[]>;
+  resolveImageUrl(path: string): string;
+}
+```
+
+The bulk of the work is mapping: translating the CMS's response shape into the
+normalized `CmsPage` / `CmsBlock` / `CmsGlobal` / `CmsArticle` types in
+`lib/cms/types.ts`. Use `lib/cms/providers/strapi.ts` (REST),
+`prepr.ts` (GraphQL + runtime schema introspection), or `contentful.ts`
+(GraphQL + Rich Text → HTML) as starting points.
+
+To surface a new provider through the scaffolder:
+
+1. Add it to the boilerplate's `lib/cms/index.ts` switch and its
+   `.env.local.example` credential block.
+2. In the accelerator, extend the `CmsAdapter` enum in
+   [`packages/cli/src/schema/propellerJson.ts`](https://github.com/propeller-commerce/propeller-v2-accelerator/blob/master/packages/cli/src/schema/propellerJson.ts),
+   add a prompt choice and `--cms` help entry, add its credential lines to
+   `activateCmsProviderEnv` in `packages/cli/src/commands/scaffold.ts`, and add a
+   `cms/README.md` case in `packages/cli/src/template/cmsReadme.ts`.

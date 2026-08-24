@@ -1,0 +1,7 @@
+{
+  "_comment": "Paths to delete when psp === 'multisafepay': the Mollie half of the boilerplate's two-PSP surface. Its npm package is dropped from package.json by overlay-psp-multisafepay/package.patch.json.",
+  "remove": [
+    "app/api/mollie",
+    "lib/mollie.ts"
+  ]
+}

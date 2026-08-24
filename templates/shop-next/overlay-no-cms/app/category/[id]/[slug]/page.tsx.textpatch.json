@@ -1,0 +1,17 @@
+{
+  "_comment": "--cms=none: the category page has no CMS-driven banner. Rather than ship a whole-file overlay (which froze against the boilerplate and drifted — the old overlay missed the SDK-0.14 pluralized Category fields, category.names/.descriptions/.shortDescriptions, and later the stock-availability filter, breaking `next build`), surgically remove only the three CMS-banner touch points: the lib/cms + CategoryBanner imports, the server-side banner fetch, and its render. Everything else (plural fields, stock filter, SEO resolvers, the CategoryIsland seed) then tracks the boilerplate automatically. A stale `find` here is a HARD ERROR at scaffold time (see textPatch.ts), so future boilerplate drift surfaces loudly instead of silently shipping a broken page.",
+  "replace": [
+    {
+      "find": "import { getCategoryBanner } from '@/lib/cms';\nimport type { CmsCategoryBanner } from '@/lib/cms/types';\nimport CategoryBanner from '@/components/cms/blocks/CategoryBanner';\n",
+      "with": ""
+    },
+    {
+      "find": "  // CMS banner — fetched server-side so it is in the initial HTML.\n  const banner: CmsCategoryBanner | null = await getCategoryBanner(\n    String(categoryId)\n  );\n\n",
+      "with": ""
+    },
+    {
+      "find": "          {/* CMS Category Banner — server-rendered. */}\n          {banner && <CategoryBanner banner={banner} />}\n\n",
+      "with": ""
+    }
+  ]
+}

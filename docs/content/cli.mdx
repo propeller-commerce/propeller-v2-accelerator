@@ -1,0 +1,120 @@
+---
+title: CLI reference
+sidebar_label: CLI reference
+sidebar_position: 3
+---
+
+# CLI reference
+
+Two binaries ship from this package:
+
+- **`create-propeller-shop`** — the one-shot scaffolder. Run from outside
+  a shop.
+- **`propeller`** — per-shop tools. Run from inside a shop (or its
+  `frontend/` directory).
+
+## `create-propeller-shop <name> [flags]`
+
+Scaffolds `<name>/` containing `frontend/` and `cms/`. Atomic per
+attempt: any failure rolls back the target directory so you never land
+on a half-scaffolded shop.
+
+### Flags
+
+| Flag | Type | Notes |
+|---|---|---|
+| `--stack` | `next \| vue` | Which template tree to copy. |
+| `--mode` | `b2b \| b2c \| hybrid` | See [Shop modes](/shop-modes). |
+| `--cms` | `strapi \| cms \| none` | CMS adapter to declare in `propeller.json`. `none` writes `null`. |
+| `--psp` | `mollie \| multisafepay \| none` | Payment service provider. The other provider's package + routes are removed; `none` removes both. |
+| `--spare-parts` | `yes \| no` | Keep the `/machines` spare-parts section. `no` deletes its pages, helpers, route and nav entry. |
+| `--locales` | comma list | BCP-47 codes, e.g. `en,nl,de`. |
+| `--default-locale` | string | Must be in `--locales`. |
+| `--currency-code` | ISO 4217 | e.g. `EUR`, `USD`. Display symbol derives from this. |
+| `--portal-mode` | `open \| semi-closed \| closed` | Catalog visibility for anonymous visitors. |
+| `--site-url` | URL | Public origin, used for SEO + canonical URLs. |
+| `--skip-install` | flag | Skip `npm install` after copy. |
+| `--yes` | flag | Accept every default; no prompts. |
+
+Any flag you omit is asked interactively.
+
+### Defaults applied by `--yes`
+
+| Setting | Default |
+|---|---|
+| stack | `next` |
+| mode | `hybrid` |
+| cms | `none` |
+| psp | `none` |
+| spare-parts | `yes` |
+| locales | `en` |
+| default-locale | `en` |
+| currency-code | `EUR` |
+| portal-mode | derived from mode (b2b → `semi-closed`, b2c/hybrid → `open`) |
+| site-url | `https://<name>.example.com` |
+| skip-install | false |
+
+### What the scaffold does
+
+1. Validate `<name>` (kebab-case, dir doesn't exist).
+2. Run prompts → build a `ShopConfig` → validate with Zod.
+3. Create `<name>/frontend/` and `<name>/cms/`.
+4. Copy `templates/shop-{stack}/shared/**` → `frontend/`.
+5. If `mode !== 'b2c'`: copy `b2b-routes/**` → same destination.
+6. Run Handlebars substitution over `*.template.{ts,tsx,vue,json,md,mjs}` —
+   strip `.template` on write.
+7. Write `propeller.json` directly from the in-memory schema.
+8. Write `.env.local` from `.env.example` with placeholder CMS values.
+9. Write `cms/README.md` with per-CMS install instructions.
+10. Pin the major Propeller packages to exact GitHub-master commits at
+    scaffold time.
+11. `cd frontend && npm install` (unless `--skip-install`).
+12. `git init` and create the initial commit (best-effort).
+13. Print next-steps banner.
+
+### Atomic rollback
+
+If any of steps 3-10 fail, the entire target tree is removed. You can
+re-run the scaffold safely without cleaning up a half-baked directory.
+
+## `propeller doctor`
+
+See **[doctor](/doctor)** for the full reference.
+
+## `propeller check-anchors`
+
+```bash
+propeller check-anchors --stack <next|vue|nuxt> [--boilerplate <dir>]
+```
+
+Verifies that this CLI's text-patch anchors still match a boilerplate
+checkout (`--boilerplate` defaults to the current directory). Exit code
+1 lists every anchor that no longer matches.
+
+A text patch anchors on a verbatim snippet of boilerplate source, so it
+breaks from either side. `npm run check:textpatches` guards this repo's
+side at publish time. This command is for the boilerplates' own CI: a
+boilerplate commit can invalidate an anchor in an already-published CLI,
+which a publish-time gate cannot see. Run it there against the version
+users actually install:
+
+```yaml
+anchors:
+  script:
+    - npx -y -p @propeller-commerce/create-propeller-shop propeller check-anchors --stack next --boilerplate .
+```
+
+## `propeller upgrade` and `propeller eject`
+
+Reserved for Phase B — see [Roadmap](/roadmap). The schema and
+`customisations.ejected` field are wired in from day one so adding
+these commands later is non-breaking.
+
+## Versioning
+
+The CLI and the templates ship at the same version. The version baked
+into `propeller.json -> template.version` is the CLI version at scaffold
+time. `propeller doctor` uses it to know which version of the diff pack
+to apply when `upgrade` lands.
+
+See **[Changelog](/changelog)** for the per-release history.

@@ -1,0 +1,7 @@
+{
+  "_comment": "--psp=none: drop both PSP packages. `null` deletes the key (see jsonPatch.ts). The CLI prunes the matching entries from package-lock.json so npm ci doesn't reinstall them.",
+  "dependencies": {
+    "@propeller-commerce/propeller-v2-mollie": null,
+    "@propeller-commerce/propeller-v2-msp": null
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "propeller-shop-template-vue",
+  "stack": "vue",
+  "version": "0.3.0",
+  "description": "Vue 3 + Vite SSR shop template for Propeller Commerce.",
+  "propellerCompat": {
+    "propeller-v2-vue-ui": ">=0.2.0",
+    "propeller-v2-core-ui": ">=0.2.0",
+    "propeller-v2-cms-vue": ">=0.1.0"
+  }
+}

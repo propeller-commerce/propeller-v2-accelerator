@@ -1,0 +1,13 @@
+{
+  "_comment": "--spare-parts=no: /machines is gone, so drop its nav entry — otherwise the menu shows a link to a 404. Only the unshift block goes; `isContact` has other users in this header (company switcher).",
+  "replace": [
+    {
+      "find": "    links.unshift({ label: 'Machines', url: '/machines', highlight: false });\n",
+      "with": ""
+    },
+    {
+      "find": "// Contact-only: the machines section reads the contact's MY_INSTALLATIONS, so\n// the nav entry only appears for a logged-in contact. Mirrors propeller-next's\n// Header `isContact` gate.\n",
+      "with": "// True for a logged-in contact (as opposed to a customer) — gates the\n// contact-only header UI.\n"
+    }
+  ]
+}

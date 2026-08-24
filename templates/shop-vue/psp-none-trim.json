@@ -1,0 +1,4 @@
+{
+  "_comment": "Deliberately empty — the Vue shop deletes NO files for a PSP choice, unlike shop-next / shop-nuxt. Its PSP HTTP routes are registered INLINE in server.js, which imports src/server/{mollie,msp}.js at boot: deleting a provider module would crash the server, and cutting ~110 lines of route registrations out of server.js would need a patch that breaks on every unrelated edit to it. So overlay-psp-<choice>/ swaps the unused provider module(s) for a 'not configured' stub instead — the routes answer 503 and the npm package is still removed from package.json + package-lock.json. Same reasoning for psp-mollie / psp-multisafepay, which have no manifest at all (a missing manifest is a no-op).",
+  "remove": []
+}

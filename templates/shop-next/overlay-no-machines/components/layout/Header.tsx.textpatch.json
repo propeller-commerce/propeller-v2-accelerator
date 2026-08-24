@@ -1,0 +1,17 @@
+{
+  "_comment": "--spare-parts=no: /machines is deleted, so drop its two nav entries (desktop + mobile) and the `isContact` gate that exists only for them — the const is unused afterwards. Surgical find/replace so the rest of this 900+ line header tracks the boilerplate.",
+  "replace": [
+    {
+      "find": "  // The machines / spare-parts area is gated to logged-in contacts, so its nav\n  // entry only shows for them. Mirrors the CompanySwitcher's contact check.\n  const isContact = !!(state.isAuthenticated && state.user && 'contactId' in state.user);\n",
+      "with": ""
+    },
+    {
+      "find": "                {isContact && (\n                  <Link href={localizeHref('/machines', language)} className=\"hover:text-foreground transition-colors\">\n                    Machines\n                  </Link>\n                )}\n",
+      "with": ""
+    },
+    {
+      "find": "              {isContact && (\n                <Link\n                  href={localizeHref('/machines', language)}\n                  className=\"block px-4 py-3 text-sm font-medium text-foreground\"\n                  onClick={() => setShowMobileMenu(false)}\n                >\n                  Machines\n                </Link>\n              )}\n",
+      "with": ""
+    }
+  ]
+}

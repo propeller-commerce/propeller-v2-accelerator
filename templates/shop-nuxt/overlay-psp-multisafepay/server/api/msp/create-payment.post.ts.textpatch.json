@@ -1,0 +1,9 @@
+{
+  "_comment": "--psp=multisafepay: server/utils/mollie.ts is deleted with the rest of the Mollie half, but this route imports the provider-agnostic on-account guard from it. Repoint the import at server/utils/payments.ts, which the same overlay ships with that helper.",
+  "replace": [
+    {
+      "find": "import { isOnAccountMethod } from '../../utils/mollie';",
+      "with": "import { isOnAccountMethod } from '../../utils/payments';"
+    }
+  ]
+}

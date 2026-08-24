@@ -1,0 +1,8 @@
+{
+  "_comment": "Paths (relative to the scaffolded shop root) to delete when --punchout=no (the default). The boilerplate ships OCI + cXML PunchOut on top of magic-token login: the /api/punchout/* route handlers, the server glue (lib/punchout.ts) and the cart transfer button. A shop that isn't a B2B e-procurement catalogue has no use for any of it. The @propeller-commerce/propeller-v2-punchout package is dropped by overlay-no-punchout/package.patch.json; the files that merely reference punchout (cart page, data/config.ts, env) are patched, not deleted.",
+  "remove": [
+    "app/api/punchout",
+    "components/PunchoutTransfer.tsx",
+    "lib/punchout.ts"
+  ]
+}

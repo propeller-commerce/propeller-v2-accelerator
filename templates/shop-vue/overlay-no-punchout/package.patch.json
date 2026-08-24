@@ -1,0 +1,6 @@
+{
+  "_comment": "--punchout=no: drop the punchout package. `null` deletes the key (see jsonPatch.ts). The CLI prunes the matching entry from package-lock.json so npm ci doesn't reinstall it.",
+  "dependencies": {
+    "@propeller-commerce/propeller-v2-punchout": null
+  }
+}

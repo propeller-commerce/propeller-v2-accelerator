@@ -1,0 +1,9 @@
+{
+  "_comment": "--spare-parts=no: MachinesView.vue is deleted, so its route has to go too — a dynamic import of a missing file breaks the build.",
+  "replace": [
+    {
+      "find": "        // Machines / spare parts (contact-only) — CSR; `:slug*` matches the root\n        // (/machines) AND any drill-down (/machines/a/b/…). Guarded by requiresAuth.\n        { path: 'machines/:slug*', name: 'machines', meta: { requiresAuth: true }, component: () => import('@/views/MachinesView.vue') },\n\n",
+      "with": ""
+    }
+  ]
+}

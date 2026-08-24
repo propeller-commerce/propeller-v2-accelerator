@@ -1,0 +1,9 @@
+{
+  "_comment": "--spare-parts=no: drop the machine keys from runtimeConfig.public — their only reader (MachineBrowser.vue) is deleted and the env vars that feed them are stripped from .env.example.",
+  "replace": [
+    {
+      "find": "      // Machines / spare parts. Read on the client via useRuntimeConfig().public\n      // — the machine pages are CSR and process.env.NUXT_PUBLIC_* is undefined in\n      // the browser bundle, so the source/language must live here (not the\n      // process.env reads in app/utils/config.ts). `source` empty = disabled.\n      machineSource: process.env.NUXT_PUBLIC_MACHINE_SOURCE || process.env.BOILERPLATE_MACHINE_SOURCE || '',\n      machineLanguage: process.env.NUXT_PUBLIC_MACHINE_LANGUAGE || process.env.BOILERPLATE_MACHINE_LANGUAGE || 'EN',\n",
+      "with": ""
+    }
+  ]
+}

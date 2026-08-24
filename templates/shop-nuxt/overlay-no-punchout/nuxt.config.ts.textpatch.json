@@ -1,0 +1,9 @@
+{
+  "_comment": "--punchout=no: remove the server-only punchout runtimeConfig keys.",
+  "replace": [
+    {
+      "find": "\n    // ── PunchOut (OCI + cXML) — server-only ─────────────────────────────────\n    // The /api/punchout/* Nitro routes read these via useRuntimeConfig(event).\n    // Wire-format logic lives in @propeller-commerce/propeller-v2-punchout; the\n    // glue is in server/utils/punchout.ts. Secrets never reach the client.\n    punchoutEnabled: process.env.PUNCHOUT_ENABLED || '',\n    // Candidate buyer contact ids (CSV) = the plugin's PROPELLER_CXML_CONTACT_ID.\n    // Each contact's CXML_SHARED_SECRET track attribute is compared to the\n    // inbound cXML SharedSecret.\n    cxmlContactId: process.env.CXML_CONTACT_ID || '',\n    punchoutCurrency: process.env.PUNCHOUT_CURRENCY || 'EUR',\n    punchoutTransferTarget: process.env.PUNCHOUT_TRANSFER_TARGET || '_self',\n    // Debug: transfer renders a readable OCI/cXML preview instead of auto-POST.\n    punchoutDebug: process.env.PUNCHOUT_DEBUG || '',\n",
+      "with": ""
+    }
+  ]
+}

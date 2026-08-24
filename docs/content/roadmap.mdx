@@ -1,0 +1,89 @@
+---
+title: Roadmap
+sidebar_position: 10
+---
+
+# Roadmap
+
+What v0.x ships, what's deferred, and why.
+
+## Shipped (v0.3.x)
+
+**Phase A — scaffolding end-to-end:**
+
+- `create-propeller-shop` CLI with full prompt flow + `--yes` defaults
+- `propeller doctor` — manifest-vs-shop drift check
+- `shop-next` template — runnable Next.js shop
+- `shop-vue` template — runnable Vue 3 + Vite SSR shop
+- `cms-adapter-strapi` — Strapi v5 REST implementation
+- `cms-adapter-cms` — generic Propeller-CMS stub
+- `propeller.json` schema + Zod validation
+- B2B route tree (split into `b2b-routes/` per template, scaffolded
+  only for `mode !== 'b2c'`)
+- Per-route `<RequireUserMode>` (Next) / router guard (Vue) for hybrid
+  shops
+- Flat `<shop>/{frontend,cms}/` output (dropped `public_html/` in 0.3.2)
+
+## Deferred (Phase B)
+
+`propeller upgrade [--to <version>]`
+
+Pull template + UI-package updates into an existing shop without
+clobbering local edits.
+
+The shape:
+
+- Precomputed diffs between template versions ship with each CLI release.
+- For each changed file: skip if path is in `propeller.json -> customisations.ejected`;
+  apply if the shop's file equals the previous-version base; 3-way
+  merge (using `diff3` / `git merge-file`) otherwise.
+- Per-version codemods (`jscodeshift` for `.tsx`, `ts-morph` for `.ts`,
+  custom Vue SFC walker for `.vue`).
+- Conflict reporter writes standard git markers.
+- Checks `template.propellerCompat` against installed package versions
+  before proceeding.
+
+`propeller eject <path>`
+
+Append a path to `propeller.json -> customisations.ejected`. Future
+`upgrade` runs will skip it.
+
+Why deferred: needs a precomputed-diff pack format + tooling that's
+non-trivial to design. The schema + `ejected` field are wired in from
+day one so adding `upgrade` later is non-breaking.
+
+## Deferred (Phase C)
+
+`propeller migrate-mode <new-mode>`
+
+Re-run the scaffolder in dry-run for the mode diff, apply only newly-required
+routes; never remove files.
+
+Why deferred: rare operation; manual re-scaffold + diff is acceptable
+until there's user pressure.
+
+## Probably never
+
+- **Nuxt template** — would duplicate the Vue template's deeply Nuxt-coupled
+  parts (server.js, vite.config.ts) without buying much. If the Propeller
+  Vue stack moves to Nuxt, the Vue template would migrate; a separate Nuxt
+  template is unlikely.
+- **Mobile templates** — out of scope. Shops needing native apps
+  consume the SDK directly.
+
+## When?
+
+No commit. Phase B's diff-pack design is the biggest open question; it
+needs at least a few real upgrade scenarios to validate the
+codemod-vs-merge split. Phase C is on hold until a shop actually needs
+it.
+
+## Things that aren't roadmap items but get asked about
+
+- **Tags?** Per-package `v<X.Y.Z>` tags are now created by GitLab CI on
+  every release commit. See the per-package GitHub releases page.
+- **npm publishing?** Not yet — packages are consumed via
+  `github:propeller-commerce/<pkg>#master` pins until a 1.0 line stabilises.
+- **changesets / semantic-release?** Not yet. Manual `Release X.Y.Z`
+  commits + a CHANGELOG entry are the current discipline; the SDK has
+  used it for a year without friction.

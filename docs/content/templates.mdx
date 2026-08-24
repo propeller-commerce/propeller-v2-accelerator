@@ -1,0 +1,115 @@
+---
+title: Templates
+sidebar_position: 6
+---
+
+# Templates
+
+Three stacks ship as templates: `shop-next`, `shop-vue` and `shop-nuxt`. Each
+scaffolds a **runnable shop**, not a starter — the full Propeller surface
+(login, register, cart, checkout, catalog, account routes, payments, spare
+parts) is included.
+
+## Clone and overlay
+
+A template is **not** a copy of the app. Since CLI 0.5.0 the shop is cloned from
+the public boilerplate mirror at scaffold time, and the template contributes
+only the parts that differ per shop:
+
+```
+templates/
+  shop-next/
+    template.json                  # manifest: stack, version, propellerCompat
+    overlay/                       # applied to every shop
+    overlay-no-cms/                # --cms=none
+    overlay-psp-none/              # --psp=none
+    overlay-psp-mollie/            # --psp=mollie
+    overlay-psp-multisafepay/      # --psp=multisafepay
+    overlay-no-machines/           # --spare-parts=no
+    overlay-b2c/                   # --mode=b2c (Vue only today)
+    no-cms-trim.json               # { "remove": [...] } deletion manifests
+    psp-none-trim.json
+    psp-mollie-trim.json
+    psp-multisafepay-trim.json
+    no-machines-trim.json
+    b2c-trim.json
+  shop-vue/   … same shape
+  shop-nuxt/  … same shape
+```
+
+Keeping a full copy of each boilerplate in this repo is exactly the drift the
+clone model removed: the copy went stale every time a boilerplate moved, and
+shops scaffolded in between silently got old code.
+
+### What an overlay may contain
+
+| Kind | Behaviour |
+|---|---|
+| plain file | copied over the clone |
+| `*.template.*` | rendered with Handlebars, written without the `.template` suffix |
+| `*.patch.json` | deep-merged onto the clone's `<name>.json` (`null` deletes a key; a top-level `_comment` documents the patch and is dropped before merging) |
+| `*.textpatch.json` | surgical find/replace on a source file — **fails loudly** when the snippet is gone, so a moved boilerplate surfaces at scaffold time instead of shipping a broken shop |
+
+Prefer a text patch over a whole-file overlay. A whole-file overlay freezes the
+accelerator's copy of a file against every later boilerplate edit; a text patch
+touches the three lines it cares about and lets the rest track upstream.
+
+### Order of application
+
+1. clone the boilerplate (`master` by default)
+2. `overlay/`
+3. `--cms=none` → `overlay-no-cms/` then `no-cms-trim.json`
+4. `--psp=<choice>` → `overlay-psp-<choice>/` then `psp-<choice>-trim.json`
+5. `--spare-parts=no` → `overlay-no-machines/` then `no-machines-trim.json`
+6. `--mode=b2c` → `overlay-b2c/` then `b2c-trim.json`
+
+Overlay-before-trim in each pair: the replacements land first, the deletions
+remove what's left. A missing overlay directory or manifest is a no-op, so each
+stack ships only the halves it actually needs.
+
+## Per-stack differences that matter
+
+- **PSP removal.** Next and Nuxt keep their PSP routes in dedicated files, so
+  the unchosen provider is deleted outright. The Vue boilerplate registers its
+  PSP routes inline in `server.js` and imports the provider modules at boot —
+  deleting one would crash the server — so the unused module is replaced by a
+  "not configured" stub and those routes answer 503. Either way the npm package
+  is removed from `package.json` and pruned from `package-lock.json`.
+- **Route removal.** Next (App Router) and Nuxt (file-based routing) drop a
+  route by deleting its file. Vue's router imports every view explicitly, so
+  removing a view always needs a matching router patch — which is why
+  `overlay-b2c/` and `overlay-no-machines/` exist for Vue.
+- **On-account guard.** `--psp=multisafepay` on Nuxt also ships
+  `server/utils/payments.ts` and repoints one import: upstream, the
+  provider-agnostic on-account check lives in the Mollie module.
+
+## Templated files (Handlebars)
+
+| File | What it parameterises |
+|---|---|
+| `overlay/package.patch.json` | shop `name`, `doctor` script, accelerator devDependency |
+| `overlay/README.template.md` | shop name, stack, mode-conditional install notes |
+
+Substitution variables are documented in the
+[propeller.json schema](/propeller-json#substitution-variables).
+
+## Choosing a stack
+
+1. **Existing team skills.** All three ship the same Propeller surface — there
+   is no feature gap between them.
+2. **SSR posture.** Next 16 uses Server Components for the catalog shells; Vue 3
+   + Vite uses SSR with client islands; Nuxt 3 uses Nitro SSR with the same
+   island split as Vue.
+
+Neither stack locks you in — the consumer-owned `lib/api.ts` / `lib/server.ts`
+seam means you can shell out to your own backend services through the same
+composables either way.
+
+## Template manifest
+
+Each template ships a `template.json` declaring:
+
+- `stack`: `'next' | 'vue' | 'nuxt'`
+- `version`: semver matching the CLI version at release time
+- `propellerCompat`: semver range of the Propeller UI packages this template is
+  compatible with
