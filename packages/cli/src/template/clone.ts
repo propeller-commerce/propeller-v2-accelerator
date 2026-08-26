@@ -37,6 +37,7 @@ import {
   isJsonPatch,
   jsonPatchTargetName,
 } from './jsonPatch';
+import { stripCiFile } from './ciStrip';
 import {
   applyTextPatch,
   isTextPatch,
@@ -360,6 +361,11 @@ export async function scaffoldFromBoilerplate(args: {
   if (args.mode === 'b2c') {
     await applySlice('overlay-b2c', 'b2c-trim.json');
   }
+
+  // The boilerplate's own publish jobs must not survive into a customer's
+  // pipeline — see ciStrip.ts. Runs after the overlays so it also covers a
+  // `.gitlab-ci.yml` an overlay put there.
+  await stripCiFile(path.join(args.destFrontend, '.gitlab-ci.yml'));
 
   return {
     filesCloned: clone.filesCloned,

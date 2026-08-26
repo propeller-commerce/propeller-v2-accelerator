@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-08-26
+
+### Added
+
+- **The scaffolded `.gitlab-ci.yml` no longer carries the boilerplate's own
+  publishing jobs.** `mirror_to_github`, `release_to_github` and `check_anchors`
+  belong to the boilerplate repo alone; a customer project that inherited them
+  and had a `GITHUB_TOKEN` CI variable would publish its own storefront —
+  branding, copy, tenant endpoints, custom code — to a public repo, and
+  force-overwrite the public boilerplate on the way. The deploy pipeline is kept
+  intact; the file is removed outright when nothing but those jobs was in it
+  (propeller-nuxt's CI is exactly that, and a pipeline with stages and no jobs
+  fails on every push).
+- **`--locales` decides which translation folders ship.** It previously decided
+  nothing: every scaffold got the boilerplate's own `en` + `nl`. `--locales=en`
+  left an `nl` nobody asked for routing and prefixed, and `--locales=en,fr`
+  shipped no `fr` at all — so `/` mapped to a language with no translations
+  while both real locales sat behind a prefix. Requested locales the boilerplate
+  has no strings for are now reported as a note rather than failing: the shop
+  builds and falls back to English, which is a workable start for a translator.
+- **`--locales` reaches the Vue and Nuxt routers.** Both hardcoded
+  `['NL','EN']`, so a shop scaffolded with other locales still prefixed exactly
+  those two. Written as `VITE_LOCALES` / `BOILERPLATE_LOCALES`, which those
+  boilerplates now read (vue 1.14.0, nuxt 1.11.0).
+
 ## [0.9.3] - 2026-08-24
 
 ### Added

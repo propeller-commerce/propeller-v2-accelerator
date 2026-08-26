@@ -20,6 +20,7 @@ import { scaffoldFromBoilerplate } from '../template/clone';
 import { buildCmsReadme } from '../template/cmsReadme';
 import { removeEnvKeys, setEnvVar } from '../template/envEdit';
 import { pruneLockDependencies } from '../template/lockfile';
+import { pruneLocales } from '../template/locales';
 import { getCliVersion } from '../util/version';
 
 /** npm package per PSP — removed from the manifest when it isn't chosen. */
@@ -80,6 +81,19 @@ const DEFAULT_LANGUAGE_VAR: Record<ShopConfig['stack'], string> = {
   nuxt: 'BOILERPLATE_DEFAULT_LANGUAGE',
 };
 
+/**
+ * Where each boilerplate keeps the full list of languages it ships.
+ *
+ * Vue and Nuxt hardcoded `['NL','EN']`, so `--locales` decided which locale
+ * FOLDERS were kept but not which languages the router prefixed — a shop
+ * scaffolded `--locales=en,fr` still prefixed `en` and left `fr` unrouted.
+ * Next derives the list from the folders on disk and needs no var.
+ */
+const LOCALES_VAR: Partial<Record<ShopConfig['stack'], string>> = {
+  vue: 'VITE_LOCALES',
+  nuxt: 'BOILERPLATE_LOCALES',
+};
+
 export interface ScaffoldOptions extends PromptDefaults {
   yes?: boolean;
   cwd?: string;
@@ -130,6 +144,14 @@ export async function runScaffold(opts: ScaffoldOptions): Promise<void> {
       punchout: config.punchout,
       destFrontend: frontend,
       ctx,
+    });
+
+    // 4a2. Drop the translation folders the shop didn't ask for, and note any
+    //      it asked for that the boilerplate has no strings for.
+    const localeResult = await pruneLocales({
+      stack: config.stack,
+      destFrontend: frontend,
+      locales: config.locales,
     });
 
     // 4b. Keep the lockfile honest about the packages the overlays just removed
@@ -216,8 +238,20 @@ export async function runScaffold(opts: ScaffoldOptions): Promise<void> {
         `+ ${copyStats.filesOverlaid + copyStats.filesTemplated} overlay ` +
         `(${copyStats.filesTemplated} templated)` +
         (copyStats.filesTrimmed ? ` − ${copyStats.filesTrimmed} trimmed` : '') +
+        (localeResult.removed.length ? ` − ${localeResult.removed.join(', ')} locale(s)` : '') +
         '.'
     );
+
+    if (localeResult.missing.length > 0) {
+      // eslint-disable-next-line no-console
+      console.log(
+        chalk.yellow(
+          `Note: the boilerplate ships no translations for ${localeResult.missing.join(', ')}. ` +
+            `Those locales route and build, but their strings fall back to English until you ` +
+            `add the files under the shop's locales folder.`
+        )
+      );
+    }
   } catch (err) {
     spinner.fail(`Scaffolding failed: ${(err as Error).message}`);
     await safeRemove(root);
@@ -421,6 +455,12 @@ async function applyFeatureEnv(frontend: string, config: ShopConfig): Promise<vo
   // ships `NL`, and every stack computes its locale prefixes as "not the
   // default", so an unwritten value silently inverts the routing.
   env = setEnvVar(env, DEFAULT_LANGUAGE_VAR[config.stack], defaultLanguageOf(config));
+
+  // The full locale list, for the stacks that can't derive it from the folders.
+  const localesVar = LOCALES_VAR[config.stack];
+  if (localesVar) {
+    env = setEnvVar(env, localesVar, config.locales.join(','));
+  }
 
   const publicVar = PUBLIC_PAYMENT_PROVIDER_VAR[config.stack];
   if (config.psp) {
