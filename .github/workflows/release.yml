@@ -90,15 +90,25 @@ jobs:
 
       # The `files` allowlist in package.json is the privacy boundary. Assert
       # it held before anything leaves the runner.
+      #
+      # Match on the PATHS, not on raw JSON lines, and anchor `src/` to the
+      # tarball root. The previous pattern looked for "/src/" anywhere, which
+      # got it wrong both ways: it never matched a package's own source (that
+      # packs as "src/...", with no leading slash, so the guard it was written
+      # for never fired) and it DID match this monorepo's template payload,
+      # where "templates/<stack>/overlay-*/src/**" is the product. Neither
+      # surfaced until now because the first run of this workflow skipped every
+      # step — 0.10.0 was already on npm, so the gate short-circuited.
       - name: Assert the tarball ships no private files
         if: steps.gate.outputs.skip == 'false'
         working-directory: packages/cli
         run: |
-          LEAK=$(npm pack --dry-run --json | grep -iE '"path".*(\.claude|memory|MEMORY|CLAUDE|\.env|/src/)' || true)
+          PATHS=$(npm pack --dry-run --json | sed -n 's/.*"path": *"\([^"]*\)".*/\1/p')
+          LEAK=$(printf '%s\n' "$PATHS" | grep -iE '(^|/)(\.claude|memory)(/|$)|(^|/)(CLAUDE|MEMORY)\.md$|(^|/)\.env|^src/' || true)
           if [ -n "$LEAK" ]; then
             echo "PRIVATE FILE IN TARBALL - aborting:"; echo "$LEAK"; exit 1
           fi
-          echo "Tarball clean."
+          echo "Tarball clean ($(printf '%s\n' "$PATHS" | wc -l) files)."
 
       # `--access public` is not passed: publishConfig.access already sets it.
       - if: steps.gate.outputs.skip == 'false'

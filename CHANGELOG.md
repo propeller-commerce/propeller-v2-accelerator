@@ -50,6 +50,18 @@ a locale list without `en`, and a doctor that could never pass.
 - `PruneLocalesResult.fallback` — the locale that missing dictionaries actually
   resolve to.
 
+### Internal
+
+- **The publish workflow privacy guard never worked, in either direction.** It
+  grepped tarball paths for `/src/` anywhere, which does not match a package's
+  own source (that packs as `src/...`, no leading slash) and does match this
+  monorepo's template payload, where `templates/<stack>/overlay-*/src/**` is
+  the product. It now matches on extracted paths with `src/` anchored to the
+  tarball root. Neither failure had surfaced: this workflow's only previous run
+  short-circuited because 0.10.0 was already on npm, so every step after the
+  gate was skipped. **The same pattern is in the other ten packages'
+  release.yml and is wrong there too — it will not catch a real source leak.**
+
 ## [0.10.0] - 2026-08-26
 
 ### Added
