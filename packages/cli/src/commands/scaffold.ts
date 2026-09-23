@@ -247,8 +247,9 @@ export async function runScaffold(opts: ScaffoldOptions): Promise<void> {
       console.log(
         chalk.yellow(
           `Note: the boilerplate ships no translations for ${localeResult.missing.join(', ')}. ` +
-            `Those locales route and build, but their strings fall back to English until you ` +
-            `add the files under the shop's locales folder.`
+            `Those locales route and build, but their strings fall back to ` +
+            `${localeResult.fallback ?? 'en'} until you add the files under the shop's ` +
+            `locales folder.`
         )
       );
     }

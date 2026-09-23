@@ -14,7 +14,7 @@ Scaffolded with [`create-propeller-shop`](https://github.com/propeller-commerce/
 ## Getting started
 
 ```bash
-cp .env.example .env.local         # fill in API URL + AUTH_SECRET
+cp .env.example .env               # fill in the backend endpoint + API keys
 npm install
 npm run dev                        # http://localhost:5173
 ```
@@ -68,11 +68,11 @@ The adapter package itself is not yet pinned in `package.json` — install it ma
 npm install --install-links file:../../propeller-v2-accelerator/packages/cms-adapter-{{cmsAdapter}}
 ```
 
-Then set `CMS_URL` (+ optional `CMS_TOKEN`) in `.env.local`.
+Then set `CMS_URL` (+ optional `CMS_TOKEN`) in `.env`.
 {{else}}
 This shop was scaffolded **without a CMS adapter**. The home page renders the built-in static layout and any `/<slug>` route returns 404 unless you add a static route yourself.
 
-To add a CMS later: install `propeller-v2-cms-adapter-strapi` (or another adapter), set `cms.adapter` in `propeller.json`, set `CMS_URL` in `.env.local`, then run `npm run doctor` to verify.
+To add a CMS later: install `propeller-v2-cms-adapter-strapi` (or another adapter), set `cms.adapter` in `propeller.json`, set `CMS_URL` in `.env`, then run `npm run doctor` to verify.
 {{/if}}
 
 ## Upgrade path

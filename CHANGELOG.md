@@ -6,6 +6,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-09-23
+
+Three things a scaffolded shop got wrong on day one: the README's first command,
+a locale list without `en`, and a doctor that could never pass.
+
+### Fixed
+
+- **The README's first step failed on the default stack.** `README.template.md`
+  said `cp .env.example .env.local`, but the next scaffold ships
+  `.env.local.example` — so step one after scaffolding errored out. The CLI's
+  own "Next steps" output was already correct. Each stack's README now names the
+  file it actually ships (`.env.local.example` → `.env.local` on next,
+  `.env.example` → `.env` on vue and nuxt). (PWP-969)
+- **`AUTH_SECRET` removed from the next and vue READMEs.** It is in no env
+  example and read by no code — `grep -r AUTH_SECRET` over a fresh scaffold
+  matched only the README, which sent integrators looking for a variable that
+  does not exist. (PWP-969)
+- **The nuxt README pointed at the wrong dev port** — `localhost:3000`, while
+  the scaffold's `dev` script runs `nuxt dev --port 5000`. (PWP-969)
+- **The vue README told you to put `CMS_URL` in `.env.local`** in two more
+  places; vue reads `.env`. (PWP-969)
+- **`propeller doctor` demanded B2B routes from `shop.mode` alone.** A shop that
+  deliberately removed quotes and purchase authorisation could never pass:
+  setting `features.quotes=false` and `features.authorization=false` changed
+  nothing, the output was byte-identical and the exit code stayed 1. The check
+  now pairs each route with the flag that governs it, so a correct B2C
+  configuration passes and the failure message names the flag to set. A gate
+  that can never go green is not a gate — it trains people to ignore it.
+  (PWP-997)
+- **The scaffold's "falls back to English" note could be false.** It is printed
+  for locales the boilerplate ships no translations for, but `--locales=fr,nl`
+  prunes `en` itself, so English was not there to fall back to. `pruneLocales`
+  now reports the locale that actually serves as the fallback and the message
+  names it. (PWP-977)
+
+### Added
+
+- **`scripts/check-doctor-b2b.mjs`** (`npm run check:doctor`, and in the CLI's
+  `prepublishOnly`) — two fixtures differing only in the `features` flags, with
+  the B2B routes absent from both. Flags on must fail the doctor, flags off must
+  pass. Plain node, same shape as `check-textpatches.mjs` beside it.
+- `PruneLocalesResult.fallback` — the locale that missing dictionaries actually
+  resolve to.
+
 ## [0.10.0] - 2026-08-26
 
 ### Added

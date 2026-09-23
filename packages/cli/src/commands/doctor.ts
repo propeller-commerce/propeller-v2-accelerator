@@ -10,7 +10,7 @@
  *     against installed copies (no missing deps)
  *   - data/config.ts (or src/lib/config.ts) contains the declared
  *     portalMode literal (grep — not a full parse)
- *   - B2B routes exist iff mode !== 'b2c'
+ *   - B2B routes exist iff mode !== 'b2c' AND the matching features flag is on
  *   - the configured channel resolves against the live backend, and its
  *     catalog root actually holds products
  *
@@ -142,33 +142,63 @@ async function checkB2BRoutesShape(
 ): Promise<void> {
   // Only routes the boilerplates actually still ship. Price requests were
   // dropped upstream, and keeping them here failed this check on every
-  // scaffolded shop — a red doctor for a shop that is in fact correct.
-  const b2bDirs =
+  // scaffolded shop - a red doctor for a shop that is in fact correct.
+  //
+  // Each route is paired with the `features` flag that governs it. The check
+  // used to key off `shop.mode` alone, so a shop that deliberately removed
+  // quotes and purchase authorisation could never pass: setting
+  // features.quotes=false changed nothing and the doctor exited 1 forever,
+  // which is how a gate trains people to ignore it (PWP-997).
+  const b2bRoutes: { rel: string; feature: 'quotes' | 'authorization' }[] =
     manifest.template.stack === 'next'
-      ? ['app/account/quotes', 'app/account/authorization-requests']
+      ? [
+          { rel: 'app/account/quotes', feature: 'quotes' },
+          { rel: 'app/account/authorization-requests', feature: 'authorization' },
+        ]
       : manifest.template.stack === 'nuxt'
-        ? ['app/pages/account/quotes', 'app/pages/account/authorization-requests.vue']
+        ? [
+            { rel: 'app/pages/account/quotes', feature: 'quotes' },
+            { rel: 'app/pages/account/authorization-requests.vue', feature: 'authorization' },
+          ]
         : [
-            'src/views/account/QuotesView.vue',
-            'src/views/account/AuthorizationRequestsView.vue',
+            { rel: 'src/views/account/QuotesView.vue', feature: 'quotes' },
+            { rel: 'src/views/account/AuthorizationRequestsView.vue', feature: 'authorization' },
           ];
-  const shouldHaveB2B = manifest.shop.mode !== 'b2c';
-  for (const rel of b2bDirs) {
-    const full = path.join(frontend, rel);
-    const present = await pathExists(full);
-    if (shouldHaveB2B && !present) {
-      findings.push({ level: 'fail', message: `${rel} missing (mode=${manifest.shop.mode} expects B2B routes).` });
-    } else if (!shouldHaveB2B && present) {
+
+  const b2bMode = manifest.shop.mode !== 'b2c';
+  let mismatch = false;
+
+  for (const { rel, feature } of b2bRoutes) {
+    const enabled = manifest.features[feature] !== false;
+    const expected = b2bMode && enabled;
+    const present = await pathExists(path.join(frontend, rel));
+
+    if (expected && !present) {
+      mismatch = true;
+      findings.push({
+        level: 'fail',
+        message:
+          `${rel} missing (mode=${manifest.shop.mode}, features.${feature}=true). ` +
+          `Set features.${feature} to false in propeller.json if the route was removed on purpose.`,
+      });
+    } else if (!expected && present) {
+      mismatch = true;
       findings.push({
         level: 'warn',
-        message: `${rel} present despite mode=b2c — should not have been scaffolded.`,
+        message: b2bMode
+          ? `${rel} present but features.${feature}=false - remove the route or set the flag back to true.`
+          : `${rel} present despite mode=b2c - should not have been scaffolded.`,
       });
     }
   }
-  if (findings.every((f) => !f.message.includes('B2B routes'))) {
+
+  if (!mismatch) {
+    const off = b2bRoutes.filter((r) => manifest.features[r.feature] === false).map((r) => r.feature);
     findings.push({
       level: 'ok',
-      message: `B2B route presence matches mode=${manifest.shop.mode}.`,
+      message:
+        `B2B route presence matches mode=${manifest.shop.mode}` +
+        (off.length > 0 ? ` and features (${off.map((o) => `${o}=false`).join(', ')}).` : '.'),
     });
   }
 }

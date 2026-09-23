@@ -30,6 +30,13 @@ export interface PruneLocalesResult {
   removed: string[];
   /** Locales the shop asked for that the boilerplate has no translations for. */
   missing: string[];
+  /**
+   * The locale those missing ones actually read at runtime. `en` whenever it
+   * survives the prune; otherwise the surviving locale with the most namespace
+   * files, which is what build-locales-registry.mjs picks as canonical. Saying
+   * "falls back to English" is wrong for a --locales list that excludes `en`.
+   */
+  fallback: string | null;
 }
 
 export async function pruneLocales(args: {
@@ -37,7 +44,7 @@ export async function pruneLocales(args: {
   destFrontend: string;
   locales: string[];
 }): Promise<PruneLocalesResult> {
-  const result: PruneLocalesResult = { removed: [], missing: [] };
+  const result: PruneLocalesResult = { removed: [], missing: [], fallback: null };
   const rel = LOCALES_DIR[args.stack];
   if (!rel) return result;
 
@@ -61,6 +68,20 @@ export async function pruneLocales(args: {
 
   for (const code of wanted) {
     if (!present.has(code)) result.missing.push(code);
+  }
+
+  // Mirror build-locales-registry.mjs: en when it is still there, else the
+  // locale defining the most namespaces.
+  const survivors = (await fs.readdir(dir, { withFileTypes: true }))
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name);
+  if (survivors.includes('en')) {
+    result.fallback = 'en';
+  } else if (survivors.length > 0) {
+    const count = async (l: string) =>
+      (await fs.readdir(path.join(dir, l))).filter((f) => f.endsWith('.json')).length;
+    const sizes = await Promise.all(survivors.map(async (l) => [l, await count(l)] as const));
+    result.fallback = sizes.reduce((a, b) => (b[1] > a[1] ? b : a))[0];
   }
 
   return result;

@@ -1,6 +1,6 @@
 {
   "name": "@propeller-commerce/create-propeller-shop",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/propeller-commerce/propeller-v2-accelerator.git",
@@ -29,7 +29,7 @@
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "clean": "node -e \"const{rmSync}=require('fs');for(const d of ['dist','templates'])rmSync(d,{recursive:true,force:true})\"",
-    "prepublishOnly": "node ../../scripts/check-textpatches.mjs && npm run build:templates && npm run build"
+    "prepublishOnly": "node ../../scripts/check-textpatches.mjs && npm run build:templates && npm run build && node ../../scripts/check-doctor-b2b.mjs"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.0.0",

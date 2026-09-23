@@ -14,7 +14,7 @@ Scaffolded with [`create-propeller-shop`](https://github.com/propeller-commerce/
 ## Getting started
 
 ```bash
-cp .env.example .env.local         # fill in API URL + AUTH_SECRET
+cp .env.local.example .env.local   # fill in the backend endpoint + API keys
 npm install
 npm run dev                        # http://localhost:3000
 ```

@@ -16,7 +16,7 @@ Scaffolded with [`create-propeller-shop`](https://github.com/propeller-commerce/
 ```bash
 cp .env.example .env               # fill in the backend endpoint + API keys
 npm install
-npm run dev                        # http://localhost:3000
+npm run dev                        # http://localhost:5000
 ```
 
 Run `npm run doctor` after every dependency bump to confirm `propeller.json` still matches what's installed.
