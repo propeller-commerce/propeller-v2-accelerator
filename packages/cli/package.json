@@ -1,6 +1,11 @@
 {
   "name": "@propeller-commerce/create-propeller-shop",
   "version": "0.10.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/propeller-commerce/propeller-v2-accelerator.git",
+    "directory": "packages/cli"
+  },
   "publishConfig": {
     "access": "public"
   },
