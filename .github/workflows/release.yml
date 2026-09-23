@@ -1,0 +1,106 @@
+name: Publish to npm
+
+# Publishing runs HERE, not in GitLab CI.
+#
+# npm's trusted publishing (OIDC) only accepts github.com, gitlab.com and
+# CircleCI as token issuers, and that list is hardcoded on npm's side. Our
+# GitLab is self-hosted, so it cannot mint a token npm will accept. The
+# alternative is going away too: 2FA-bypass granular tokens lose the ability to
+# publish directly around January 2027.
+#
+# So GitLab keeps verify + mirror, and the publish moves here. This file lives
+# in the GitLab source-of-truth repo and is mirrored to GitHub by the GitLab CI
+# `mirror_to_github` job - the same push that carries it is what triggers this
+# run. Edit it in GitLab; a copy edited on GitHub is overwritten by the next
+# mirror force-push.
+#
+# No npm token is involved anywhere. `id-token: write` below lets the runner
+# mint a short-lived OIDC token that npm exchanges for publish rights, scoped
+# to this repository AND this workflow filename.
+#
+# Configured once on npmjs.com (Package -> Settings -> Trusted publisher):
+#   Provider: GitHub Actions | Org: propeller-commerce
+#   Repository: propeller-v2-accelerator | Workflow: release.yml | Environment: (blank)
+#   Allowed actions MUST include direct publish - since 3 Sep 2026 new configs
+#   default to stage-only, which would stage this release instead of shipping it.
+# This is a monorepo: the published package is packages/cli, so the gate
+# reads that package.json and the publish runs from that directory. The
+# CHANGELOG stays at the repo root.
+#
+# Publishes @propeller-commerce/create-propeller-shop.
+
+on:
+  push:
+    branches: [master]
+  # Lets a failed publish be retried without inventing a new commit - the
+  # mirror only pushes on a release, so there is otherwise nothing to retrigger.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+# Never publish two versions concurrently; unlike a docs deploy, the later run
+# is not simply "the one we want" - let the first finish.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      # setup-node bundles npm 10.x; trusted publishing needs >= 11.5.1.
+      - name: Upgrade npm to a trusted-publishing capable version
+        run: npm i -g npm@latest
+
+      # Both gates carried over from the GitLab job this replaces: a version
+      # still marked Unreleased is not a release, and a version already on npm
+      # is a no-op, so re-running a pipeline is safe.
+      - name: Gate on version and CHANGELOG
+        id: gate
+        run: |
+          PKG=$(node -p "require('./packages/cli/package.json').name")
+          VERSION=$(node -p "require('./packages/cli/package.json').version")
+          echo "Package: $PKG@$VERSION"
+          if grep -Eiq "^##[[:space:]]*\[${VERSION}\].*unreleased" CHANGELOG.md; then
+            echo "CHANGELOG marks ${VERSION} as Unreleased - not publishing."
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if npm view "${PKG}@${VERSION}" version >/dev/null 2>&1; then
+            echo "${PKG}@${VERSION} is already on npm - nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - if: steps.gate.outputs.skip == 'false'
+        run: npm ci
+
+      - if: steps.gate.outputs.skip == 'false'
+        run: npm run build:templates --workspace packages/cli
+      - if: steps.gate.outputs.skip == 'false'
+        run: npm run build --workspace packages/cli
+
+      # The `files` allowlist in package.json is the privacy boundary. Assert
+      # it held before anything leaves the runner.
+      - name: Assert the tarball ships no private files
+        if: steps.gate.outputs.skip == 'false'
+        working-directory: packages/cli
+        run: |
+          LEAK=$(npm pack --dry-run --json | grep -iE '"path".*(\.claude|memory|MEMORY|CLAUDE|\.env|/src/)' || true)
+          if [ -n "$LEAK" ]; then
+            echo "PRIVATE FILE IN TARBALL - aborting:"; echo "$LEAK"; exit 1
+          fi
+          echo "Tarball clean."
+
+      # `--access public` is not passed: publishConfig.access already sets it.
+      - if: steps.gate.outputs.skip == 'false'
+        working-directory: packages/cli
+        run: npm publish --provenance
