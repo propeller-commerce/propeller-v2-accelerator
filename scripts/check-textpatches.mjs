@@ -134,9 +134,17 @@ for (const [stack, spec] of Object.entries(STACKS)) {
         checked += 1;
         // Matching everywhere is intended (see textPatch.ts); matching nowhere
         // is the stale case that breaks a scaffold.
-        if (!source.includes(op.find.replace(/\r\n/g, '\n'))) {
-          const firstLine = op.find.split('\n').find((l) => l.trim()) ?? '';
-          console.error(`  x ${rel} op#${i} - anchor not found: ${firstLine.trim().slice(0, 80)}`);
+        // `find` may list alternatives (see textPatch.ts) — first match wins, so
+        // only "none of them matched" is stale.
+        const candidates = (Array.isArray(op.find) ? op.find : [op.find]).map((f) =>
+          f.replace(/\r\n/g, '\n')
+        );
+        if (!candidates.some((c) => source.includes(c))) {
+          const firstLine = candidates[0].split('\n').find((l) => l.trim()) ?? '';
+          const alts = candidates.length > 1 ? ` (+${candidates.length - 1} alt)` : '';
+          console.error(
+            `  x ${rel} op#${i} - anchor not found${alts}: ${firstLine.trim().slice(0, 80)}`
+          );
           problems += 1;
         }
       }

@@ -1,8 +1,11 @@
 {
-  "_comment": "No-CMS scaffold: the blog pages are removed, so drop the 'Blog' link from the footer Support column — otherwise it points at a 404.",
+  "_comment": "No-CMS scaffold: the blog pages are removed, so drop the 'Blog' link from the footer Support column — otherwise it points at a 404. The second `find` entry is the pre-PWP-1022 literal still on the public mirror; drop it once the mirror carries the dictionary form.",
   "replace": [
     {
-      "find": "            <li>\n              <NuxtLink :to=\"localizeHref('/blog', languageStore.language)\" class=\"hover:text-white transition-colors\">Blog</NuxtLink>\n            </li>\n",
+      "find": [
+        "            <li>\n              <NuxtLink :to=\"localizeHref('/blog', languageStore.language)\" class=\"hover:text-white transition-colors\">{{ t.blog }}</NuxtLink>\n            </li>\n",
+        "            <li>\n              <NuxtLink :to=\"localizeHref('/blog', languageStore.language)\" class=\"hover:text-white transition-colors\">Blog</NuxtLink>\n            </li>\n"
+      ],
       "with": ""
     }
   ]

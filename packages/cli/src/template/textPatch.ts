@@ -22,6 +22,14 @@
  *     replaced everywhere it occurs. A `find` that matches nothing is a hard
  *     error — a silently-ineffective patch means the boilerplate moved and the
  *     patch is stale, which is precisely what we want surfaced at scaffold time.
+ *   - `find` may be an ARRAY of alternatives; the first one present wins, and
+ *     only "none matched" is stale. This is what makes an anchored boilerplate
+ *     line changeable at all. The anchor and the line live in repos that release
+ *     separately — the boilerplate's `check_anchors` runs the PUBLISHED CLI,
+ *     while this repo's `check:textpatches` reads the PUBLIC MIRROR — so for one
+ *     change each side must satisfy both the old and new state of the other, and
+ *     no ordering does that with a single anchor. List the new form first, keep
+ *     the old until it is gone from the mirror, then drop it.
  *   - `with: ""` deletes the matched snippet.
  *   - `with` is rendered through Handlebars first, so an inserted line can
  *     carry `{{shopName}}`. `find` is NOT rendered: an anchor is a verbatim
@@ -53,7 +61,11 @@ export function textPatchTargetName(name: string): string {
 }
 
 interface TextPatchOp {
-  find: string;
+  /**
+   * The snippet to replace, or an ARRAY of alternatives of which the first one
+   * present in the target wins. See the header note on release ordering.
+   */
+  find: string | string[];
   with: string;
 }
 
@@ -103,14 +115,20 @@ export async function applyTextPatch(args: {
     // with `"punchoutIntro" not defined` the moment that block was localized
     //. `with` IS still rendered — that text is the author's, so
     // `{{shopName}}` in an inserted line keeps working.
-    const find = op.find.replace(/\r\n/g, '\n');
+    const candidates = (Array.isArray(op.find) ? op.find : [op.find]).map((f) =>
+      f.replace(/\r\n/g, '\n')
+    );
     const replacement = renderTemplate(op.with, args.ctx).replace(/\r\n/g, '\n');
-    if (!target.includes(find)) {
+    const find = candidates.find((c) => target.includes(c));
+    if (find === undefined) {
       throw new Error(
-        `Text patch ${path.basename(args.patchPath)} is stale: the snippet ` +
-          `it expected to find in ${path.basename(args.targetPath)} is no ` +
-          `longer present. The boilerplate likely changed — update the patch.\n` +
-          `Missing snippet:\n${find}`
+        `Text patch ${path.basename(args.patchPath)} is stale: ` +
+          (candidates.length > 1
+            ? `none of its ${candidates.length} alternative snippets were found in `
+            : `the snippet it expected to find in `) +
+          `${path.basename(args.targetPath)}. The boilerplate likely changed — ` +
+          `update the patch.\nMissing snippet${candidates.length > 1 ? 's' : ''}:\n` +
+          candidates.join('\n  --- or ---\n')
       );
     }
     target = target.split(find).join(replacement);

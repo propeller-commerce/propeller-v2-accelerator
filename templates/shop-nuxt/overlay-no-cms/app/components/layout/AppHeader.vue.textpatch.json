@@ -1,8 +1,11 @@
 {
-  "_comment": "No-CMS scaffold: the blog pages are removed, so drop the '/blog' entry from the header nav links — otherwise the menu shows a link to a 404. Surgical find/replace so the rest of this 400+ line header tracks the boilerplate. Anchored on the Blog entry alone: the surrounding declaration changed from `ref([...])` to `computed(() => {...})` when the contact-only Machines link landed, so don't re-anchor on it.",
+  "_comment": "No-CMS scaffold: the blog pages are removed, so drop the '/blog' entry from the header nav links — otherwise the menu shows a link to a 404. Surgical find/replace so the rest of this 400+ line header tracks the boilerplate. Anchored on the Blog entry alone: the surrounding declaration changed from `ref([...])` to `computed(() => {...})` when the contact-only Machines link landed, so don't re-anchor on it. The second `find` entry is the pre-PWP-1022 literal still on the public mirror; drop it once the mirror carries the dictionary form.",
   "replace": [
     {
-      "find": "    { label: 'Blog', url: '/blog', highlight: false },\n",
+      "find": [
+        "    { label: headerLabels.value.blog || 'Blog', url: '/blog', highlight: false },\n",
+        "    { label: 'Blog', url: '/blog', highlight: false },\n"
+      ],
       "with": ""
     }
   ]

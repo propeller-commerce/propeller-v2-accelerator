@@ -1,8 +1,11 @@
 {
-  "_comment": "--spare-parts=no: /machines is gone, so drop its nav entry — otherwise the menu shows a link to a 404. Only the unshift block goes; `isContact` has other users in this header (company switcher).",
+  "_comment": "--spare-parts=no: /machines is gone, so drop its nav entry — otherwise the menu shows a link to a 404. Only the unshift block goes; `isContact` has other users in this header (company switcher). The second `find` entry is the pre-PWP-1022 literal still on the public mirror; drop it once the mirror carries the dictionary form.",
   "replace": [
     {
-      "find": "    links.unshift({ label: 'Machines', url: '/machines', highlight: false });\n",
+      "find": [
+        "    links.unshift({ label: headerLabels.value.machines || 'Machines', url: '/machines', highlight: false });\n",
+        "    links.unshift({ label: 'Machines', url: '/machines', highlight: false });\n"
+      ],
       "with": ""
     },
     {

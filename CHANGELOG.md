@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-09-25
+
+### Added
+
+- **A text patch `find` may now be an ARRAY of alternatives**, of which the
+  first one present in the target wins; only "none matched" is stale. This is
+  what makes a line an anchor depends on changeable at all. The anchor and the
+  line live in repos that release separately — the boilerplate's
+  `check_anchors` runs the PUBLISHED CLI, while this repo's
+  `check:textpatches` reads the PUBLIC MIRROR — so with a single exact anchor
+  each side has to satisfy both the old and the new state of the other at once,
+  and no release ordering does that. Both pipelines go red and the change
+  cannot ship. Listing the new form first and keeping the old one until the
+  mirror catches up means neither ever does.
+
+### Fixed
+
+- **Three nuxt text-patch anchors accept the localized nav labels**, so the
+  nuxt header and footer can move theirs into the locale dictionaries
+  (PWP-1022). They were anchored on the English literals that change replaces,
+  which broke `--cms=none` and `--spare-parts=no` scaffolds outright — the
+  boilerplate had to revert those three lines to unblock its own pipeline. Each
+  now lists the dictionary form first and the literal second, so this release
+  is green against the mirror as it stands AND against the boilerplate change
+  that follows it. Drop the second entry once the mirror carries the first.
+
 ## [0.11.0] - 2026-09-23
 
 Three things a scaffolded shop got wrong on day one: the README's first command,
