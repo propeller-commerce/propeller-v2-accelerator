@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-09-25
+
+### Fixed
+
+- **`propeller check-anchors` crashed on the array `find` 0.11.1 introduced**
+  — `Unexpected error: op.find.replace is not a function`. The alternatives
+  support went into the patch applier and the repo-local check script, but
+  `commands/checkAnchors.ts` carries a third copy of the same matching logic
+  and was missed. That is the copy the BOILERPLATE pipelines invoke, so every
+  stack's `check_anchors` job broke the moment a patch used an array — which
+  0.11.1's own nuxt patches do. Found immediately by running the published
+  command; the two checks that cover this repo both passed, because neither
+  exercises the shipped binary.
+
 ## [0.11.1] - 2026-09-25
 
 ### Added

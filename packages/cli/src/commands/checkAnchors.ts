@@ -117,17 +117,24 @@ export function runCheckAnchors(options: CheckAnchorsOptions): number {
     }
 
     const patch = JSON.parse(readNormalised(patchPath)) as {
-      replace?: Array<{ find: string }>;
+      replace?: Array<{ find: string | string[] }>;
     };
     for (const [i, op] of (patch.replace ?? []).entries()) {
       checked += 1;
       // Matching everywhere is intended (the applier replaces all occurrences);
-      // matching NOWHERE is the drift this exists to catch.
-      const find = op.find.replace(/\r\n/g, '\n');
-      if (!source.includes(find)) {
-        const first = find.split('\n').find((l) => l.trim()) ?? find;
+      // matching NOWHERE is the drift this exists to catch. `find` may list
+      // alternatives (see textPatch.ts) — the first present wins, so only
+      // "none of them matched" is drift.
+      const candidates = (Array.isArray(op.find) ? op.find : [op.find]).map((f) =>
+        f.replace(/\r\n/g, '\n')
+      );
+      if (!candidates.some((c) => source.includes(c))) {
+        const first = candidates[0].split('\n').find((l) => l.trim()) ?? candidates[0];
+        const alts = candidates.length > 1 ? ` (+${candidates.length - 1} alt)` : '';
         // eslint-disable-next-line no-console
-        console.error(`  x ${rel} op#${i} - anchor not found: ${first.trim().slice(0, 90)}`);
+        console.error(
+          `  x ${rel} op#${i} - anchor not found${alts}: ${first.trim().slice(0, 90)}`
+        );
         problems += 1;
       }
     }
