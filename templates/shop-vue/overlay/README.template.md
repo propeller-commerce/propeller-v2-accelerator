@@ -21,6 +21,7 @@ npm run dev                        # http://localhost:5173
 
 Run `npm run doctor` after every dependency bump to confirm `propeller.json` still matches what's installed.
 
+{{#if cmsAdapter}}
 ## Directory layout
 
 This shop is the **frontend** half of a two-tree deployment:
@@ -28,10 +29,11 @@ This shop is the **frontend** half of a two-tree deployment:
 ```
 {{shopName}}/
   frontend/          # ← you are here
-  cms/               # CMS backend (Strapi / Propeller-CMS), installed separately
+  cms/               # CMS backend or connection notes
 ```
 
-The CMS install instructions live in `../cms/README.md`.
+The CMS setup instructions live in `../cms/README.md`.
+{{/if}}
 
 ## Mode-specific surface
 
@@ -60,19 +62,15 @@ This shop is **hybrid** (B2B + B2C in one deployment):
 ## CMS
 
 {{#if cmsAdapter}}
-This shop is configured to use the **`{{cmsAdapter}}`** CMS adapter. The home page and any `/<slug>` route fetches a `CmsPage` from the adapter and renders its blocks. If the adapter returns null, the home page falls back to the built-in static homepage and other slugs return 404.
+This shop is configured to use the **`{{cmsAdapter}}`** CMS provider. The Strapi and Prepr providers ship in `src/lib/cms` and are selected at runtime by the `CMS_PROVIDER` env var — there is **no adapter package to install**. The scaffolder already set `CMS_PROVIDER={{cmsAdapter}}` (and its `VITE_CMS_PROVIDER` mirror) in `.env.example`.
 
-The adapter package itself is not yet pinned in `package.json` — install it manually:
+The home page, `/blog` and any `/<slug>` route fetch content from the active provider. If the provider returns null, the home page falls back to its built-in layout and other slugs return 404.
 
-```bash
-npm install --install-links file:../../propeller-v2-accelerator/packages/cms-adapter-{{cmsAdapter}}
-```
-
-Then set `CMS_URL` (+ optional `CMS_TOKEN`) in `.env`.
+To finish setup: copy `.env.example` to `.env` and fill in the `{{cmsAdapter}}` credentials (see the CMS section in that file, and `../cms/README.md`). Then run `npm run doctor` to verify.
 {{else}}
-This shop was scaffolded **without a CMS adapter**. The home page renders the built-in static layout and any `/<slug>` route returns 404 unless you add a static route yourself.
+This shop was scaffolded **without a CMS** (`CMS_PROVIDER=none`): the blog and CMS catch-all routes were removed. The home page renders its built-in layout and any `/<slug>` route returns 404 unless you add a static route yourself.
 
-To add a CMS later: install `propeller-v2-cms-adapter-strapi` (or another adapter), set `cms.adapter` in `propeller.json`, set `CMS_URL` in `.env`, then run `npm run doctor` to verify.
+The Strapi and Prepr providers still ship in `src/lib/cms`. To add a CMS later, restore the blog and CMS page views and their routes from the boilerplate (or scaffold with `--cms=strapi` / `--cms=prepr`), then set `CMS_PROVIDER` in `.env` and `cms.adapter` in `propeller.json`, and run `npm run doctor`.
 {{/if}}
 
 ## Upgrade path

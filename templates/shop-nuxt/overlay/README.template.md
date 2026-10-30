@@ -9,7 +9,6 @@ Scaffolded with [`create-propeller-shop`](https://github.com/propeller-commerce/
 | Portal mode    | `{{portalMode}}`  |
 | Default locale | `{{defaultLocale}}` |
 | Currency       | `{{currency}}` (`{{currencyCode}}`) |
-| CMS adapter    | `{{cmsAdapterDisplay}}` |
 
 ## Getting started
 
@@ -20,18 +19,6 @@ npm run dev                        # http://localhost:5000
 ```
 
 Run `npm run doctor` after every dependency bump to confirm `propeller.json` still matches what's installed.
-
-## Directory layout
-
-This shop is the **frontend** half of a two-tree deployment:
-
-```
-{{shopName}}/
-  frontend/          # ← you are here
-  cms/               # CMS backend (Strapi / Propeller-CMS), installed separately
-```
-
-The CMS install instructions live in `../cms/README.md`.
 
 ## Architecture
 
@@ -68,21 +55,7 @@ This shop is **hybrid** (B2B + B2C in one deployment):
 
 ## CMS
 
-{{#if cmsAdapter}}
-This shop is configured to use the **`{{cmsAdapter}}`** CMS adapter. The home page and any `/<slug>` route fetches a `CmsPage` from the adapter and renders its blocks. If the adapter returns null, the home page falls back to the built-in static homepage and other slugs return 404.
-
-The adapter package itself is not yet pinned in `package.json` — install it manually:
-
-```bash
-npm install --install-links file:../../propeller-v2-accelerator/packages/cms-adapter-{{cmsAdapter}}
-```
-
-Then set `CMS_URL` (+ optional `CMS_TOKEN`) in `.env`.
-{{else}}
-This shop was scaffolded **without a CMS adapter**. The home page renders the built-in static layout and any `/<slug>` route returns 404 unless you add a static route yourself.
-
-To add a CMS later: install `propeller-v2-cms-adapter-strapi` (or another adapter), set `cms.adapter` in `propeller.json`, set `CMS_URL` in `.env`, then run `npm run doctor` to verify.
-{{/if}}
+The Nuxt boilerplate has no CMS engine, so this shop was scaffolded **without a CMS**: the blog and CMS catch-all pages were removed. The home page renders its built-in layout and any `/<slug>` route returns 404 unless you add a page yourself. For a CMS-backed shop, scaffold the `next` or `vue` stack instead.
 
 ## Caching contract
 

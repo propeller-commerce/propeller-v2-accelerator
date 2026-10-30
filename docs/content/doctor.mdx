@@ -11,11 +11,11 @@ file at the given path) and verifies the shop matches what the manifest
 declares.
 
 ```bash
-# from the shop root
-npx propeller doctor
+# inside a scaffolded shop (frontend/, or the root of a no-CMS shop)
+npm run doctor
 
-# or from inside frontend/
-cd frontend && npx propeller doctor
+# anywhere else
+npx -y -p @propeller-commerce/create-propeller-shop propeller doctor
 ```
 
 ## What it checks
@@ -23,10 +23,10 @@ cd frontend && npx propeller doctor
 | # | Check | Level |
 |---|---|---|
 | 1 | `propeller.json` parses + validates against the Zod schema | red on failure |
-| 2 | Every declared `propeller-v2-*` package resolves against `node_modules/` | yellow on missing |
-| 3 | `data/config.ts` (Next) or `src/lib/config.ts` (Vue) contains the declared `portalMode` literal | red on mismatch |
+| 2 | Every declared `@propeller-commerce/*` package resolves against `node_modules/`; none declared at all is also flagged | yellow on missing |
+| 3 | The portal-mode var in the active env file (falling back to the example) matches `shop.portalMode` — `NEXT_PUBLIC_PORTAL_MODE` (Next), `VITE_PORTAL_MODE` (Vue), `BOILERPLATE_PORTAL_MODE` + `NUXT_PUBLIC_PORTAL_MODE` (Nuxt) | red on mismatch |
 | 4 | B2B route shape matches mode (B2B routes present iff `mode !== 'b2c'`) | red on mismatch |
-| 5 | Declared CMS adapter (`cms.adapter`) is installed | yellow on missing |
+| 5 | The CMS engine ships (`lib/cms`, Vue `src/lib/cms`) and `CMS_PROVIDER` selects the declared `cms.adapter`; the legacy `cms` value is flagged | yellow on mismatch |
 
 ### Levels
 
@@ -42,7 +42,7 @@ cd frontend && npx propeller doctor
 Use this in CI to gate merges:
 
 ```yaml
-- run: npx propeller doctor
+- run: npm run doctor
 ```
 
 ## Manifest resolution
@@ -58,24 +58,19 @@ finding.
 
 ## Why declared-not-installed is yellow
 
-The CMS adapter packages are not yet published to npm. At scaffold
-time the CLI declares `cms.adapter` in `propeller.json` but does **not**
-pin a corresponding package — the user installs it manually (the
-scaffolded `cms/README.md` has the instructions). `doctor` surfaces the
-gap as a warning so the omission isn't silent, but doesn't block the
-shop's build.
-
-Once the adapter packages land on npm and the templates pin them, this
-check will be promoted back to red.
+A freshly scaffolded shop has not run `npm install` yet, so every package is
+"declared but not installed" until it does. `doctor` surfaces the gap as a
+warning so it isn't silent, without failing a shop that is simply not
+installed yet.
 
 ## Sample output
 
 ```text
 ✓ propeller.json valid (v1, my-shop, hybrid).
-✓ propeller-v2-react-ui installed.
-✓ propeller-sdk-v2 installed.
-! propeller-v2-cms-adapter-strapi declared but not installed — install manually.
-✓ portalMode 'open' matches data/config.ts.
+✓ @propeller-commerce/propeller-v2-react-ui installed.
+✓ @propeller-commerce/propeller-sdk-v2 installed.
+! @propeller-commerce/propeller-v2-cms-react declared but not installed — run `npm install`.
+✓ portalMode 'open' matches .env.local (NEXT_PUBLIC_PORTAL_MODE=open).
 ✓ B2B route presence matches mode=hybrid.
 
 All checks passed.

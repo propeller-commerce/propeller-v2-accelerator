@@ -1,7 +1,7 @@
 /**
  * `create-propeller-shop` — scaffold a new Propeller Commerce shop.
  *
- *   npx create-propeller-shop@latest my-shop --stack=next --mode=hybrid --cms=prepr
+ *   npx @propeller-commerce/create-propeller-shop@latest my-shop --stack=next --mode=hybrid --cms=prepr
  *
  * Any missing flag is asked interactively. `--yes` skips confirmations and
  * uses defaults where prompts would have run.
@@ -23,7 +23,7 @@ async function main(): Promise<void> {
     .argument('[name]', 'Shop name (kebab-case)')
     .option('--stack <stack>', 'Frontend stack: next | vue | nuxt')
     .option('--mode <mode>', 'Shop mode: b2b | b2c | hybrid')
-    .option('--cms <cms>', 'CMS adapter: strapi | prepr | contentful | cms | none')
+    .option('--cms <cms>', 'CMS adapter: strapi | prepr | contentful (next only) | none')
     .option('--psp <psp>', 'Payment service provider: mollie | multisafepay | none')
     .option('--spare-parts <yes|no>', 'Include the spare-parts machines section (default: yes)')
     .option('--punchout <yes|no>', 'Include OCI + cXML PunchOut e-procurement (default: no)')
@@ -40,7 +40,7 @@ async function main(): Promise<void> {
         name: name ?? undefined,
         stack: options.stack as 'next' | 'vue' | 'nuxt' | undefined,
         mode: options.mode as 'b2b' | 'b2c' | 'hybrid' | undefined,
-        cms: options.cms as 'strapi' | 'prepr' | 'cms' | 'none' | undefined,
+        cms: options.cms as string | undefined,
         psp: options.psp as 'mollie' | 'multisafepay' | 'none' | undefined,
         // `--spare-parts=no` (or `false`/`0`) opts out; anything else opts in.
         // Absent flag stays undefined so the prompt still runs.

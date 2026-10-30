@@ -52,6 +52,18 @@ export function setEnvVar(env: string, key: string, value: string): string {
   return found ? collapseBlankRuns(out).join('\n') : env;
 }
 
+/** Like `setEnvVar`, but appends `KEY=value` when the key is not documented. */
+export function ensureEnvVar(env: string, key: string, value: string): string {
+  const next = setEnvVar(env, key, value);
+  if (next !== env || hasEnvKey(env, key)) return next;
+  return `${env.replace(/\n*$/, '')}\n${key}=${value}\n`;
+}
+
+/** Does the env text assign (or document a commented assignment of) `key`? */
+function hasEnvKey(env: string, key: string): boolean {
+  return env.split('\n').some((line) => ASSIGNMENT.exec(line)?.[2] === key);
+}
+
 /**
  * Remove every assignment whose key matches `matches`, the contiguous comment
  * lines immediately above it (its documentation), and any section heading that

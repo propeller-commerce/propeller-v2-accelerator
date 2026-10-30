@@ -25,13 +25,12 @@ dependency updates.
 | **`propeller` CLI** | Per-shop tools — `doctor` (validate the shop matches its manifest) and, in future, `upgrade` / `eject`. |
 | **`shop-next` template** | Next 16 + React 19 shop with all the routes, components, and config a runnable shop needs. |
 | **`shop-vue` template** | Vue 3 + Vite SSR shop with the same surface as the Next one. |
-| **`cms-adapter-strapi`** | Strapi v5 REST `CmsAdapter` implementation. |
-| **`cms-adapter-cms`** | Stub adapter for the generic Propeller CMS backend. |
+| **`packages/cms-adapter-*`** | Unpublished, legacy standalone ports of the CMS providers. Shops don't use them — every provider ships inside the boilerplate (see [CMS](/cms)). |
 
 ## Quick start
 
 ```bash
-npx create-propeller-shop@latest my-shop \
+npx @propeller-commerce/create-propeller-shop@latest my-shop \
   --stack=next \
   --mode=hybrid \
   --cms=strapi \

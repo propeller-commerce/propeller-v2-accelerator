@@ -21,6 +21,7 @@ npm run dev                        # http://localhost:3000
 
 Run `npm run doctor` after every dependency bump to confirm `propeller.json` still matches what's installed.
 
+{{#if cmsAdapter}}
 ## Directory layout
 
 This shop is the **frontend** half of a two-tree deployment:
@@ -28,10 +29,11 @@ This shop is the **frontend** half of a two-tree deployment:
 ```
 {{shopName}}/
   frontend/          # ← you are here
-  cms/               # CMS backend (Strapi / Propeller-CMS), installed separately
+  cms/               # CMS backend or connection notes
 ```
 
-The CMS install instructions live in `../cms/README.md`.
+The CMS setup instructions live in `../cms/README.md`.
+{{/if}}
 
 ## Mode-specific surface
 
@@ -68,7 +70,7 @@ To finish setup: copy `.env.local.example` to `.env.local` and fill in the `{{cm
 {{else}}
 This shop was scaffolded **without a CMS** (`CMS_PROVIDER=none`). The home page renders the built-in `<HomeFallback>` component and any `/<slug>` route returns 404 unless you add a static page yourself.
 
-To enable a CMS later — the providers already ship in `lib/cms`, nothing to install: set `CMS_PROVIDER` to `strapi`, `prepr`, or `cms` in `.env.local` (plus that provider's credentials — see the commented CMS section in `.env.local.example`), update `cms.adapter` in `propeller.json` to match, then run `npm run doctor` to verify.
+To enable a CMS later — the providers already ship in `lib/cms`, nothing to install: set `CMS_PROVIDER` to `strapi`, `prepr`, or `contentful` in `.env.local` (plus that provider's credentials — see the commented CMS section in `.env.local.example`), update `cms.adapter` in `propeller.json` to match, then run `npm run doctor` to verify.
 {{/if}}
 
 ## Upgrade path

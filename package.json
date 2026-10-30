@@ -12,7 +12,7 @@
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "check:textpatches": "node scripts/check-textpatches.mjs",
-    "check:doctor": "node scripts/check-doctor-b2b.mjs",
+    "check:doctor": "node scripts/check-doctor-b2b.mjs && node scripts/check-doctor-config.mjs",
     "clean": "npm run clean --workspaces --if-present"
   },
   "devDependencies": {

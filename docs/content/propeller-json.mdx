@@ -46,7 +46,7 @@ The scaffolded shop's identity card. Lives at
     spareParts: boolean,      // false when scaffolded with --spare-parts=no
   },
   cms: {
-    adapter: 'strapi' | 'cms' | null,
+    adapter: 'strapi' | 'prepr' | 'contentful' | null,  // legacy 'cms' still parses
     endpoint: string,         // typically "${CMS_URL}"
     preview: boolean,
   },
@@ -111,10 +111,9 @@ variables available inside templates:
 | `portalMode` | `'open' \| 'semi-closed' \| 'closed'` | `--portal-mode` |
 | `portalModeConstant` | `OPEN \| SEMI_CLOSED \| CLOSED` | uppercase enum form |
 | `channelId`, `anonymousId`, `taxZone` | string | defaults from `data/defaults.ts` |
-| `cmsAdapter` | `'strapi' \| 'cms' \| null` | `--cms` |
+| `cmsAdapter` | `'strapi' \| 'prepr' \| 'contentful' \| null` | `--cms` |
 | `cmsAdapterTsValue` | string | `'null'` or `"'<adapter>'"` |
 | `cmsAdapterJsonValue` | string | `null` or `"<adapter>"` |
-| `cmsAdapterPackage` | string | `propeller-v2-cms-adapter-<adapter>` |
 | `cmsAdapterDisplay` | string | UI-friendly label |
 | `showUserType` | `'Contact' \| 'Customer' \| null` | derived from mode |
 | `featureQuotes` / `featureAuthorization` / `featureContacts` | boolean | derived from mode |

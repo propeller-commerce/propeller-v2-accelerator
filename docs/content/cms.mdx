@@ -9,13 +9,13 @@ Marketing content — rich pages at `/{slug}`, the blog, the homepage blocks,
 header/footer globals, and category banners — is powered by a CMS provider
 selected at **runtime** from the `CMS_PROVIDER` env var.
 
-**CMS is a Next-only capability.** Only the Next boilerplate ships a CMS engine
-(`lib/cms`, with every provider built in). The Vue and Nuxt boilerplates have no
-CMS subsystem, so `--cms=<x>` on a Vue or Nuxt scaffold prints a notice and
-proceeds with no CMS.
+**CMS is available on Next and Vue.** The Next boilerplate ships a CMS engine in
+`lib/cms` (Strapi, Prepr, Contentful); the Vue boilerplate ships one in
+`src/lib/cms` (Strapi, Prepr). The Nuxt boilerplate has no CMS subsystem, so
+`--cms=<x>` on a Nuxt scaffold prints a notice and proceeds with no CMS.
 
 > **There is no adapter package to install.** Every provider already ships in
-> the Next boilerplate's `lib/cms/providers/`. Selecting a CMS is just setting
+> the boilerplate's `lib/cms/providers/` (Vue: `src/lib/cms/providers/`). Selecting a CMS is just setting
 > `CMS_PROVIDER` (the scaffolder pre-sets it) plus the provider's credentials.
 > No code to wire, nothing to `npm install`.
 
@@ -23,10 +23,9 @@ proceeds with no CMS.
 
 | Provider | What it is |
 |---|---|
-| **`strapi`** | Self-hosted Strapi v5 REST provider. Full contract — pages (typed blocks), articles, category banners, a typed global, static-slug enumeration, image-URL resolution. Configured with `STRAPI_API_URL` (+ optional `STRAPI_API_TOKEN`). |
-| **`prepr`** | Hosted Prepr GraphQL provider. Same full contract. Introspects the Prepr environment's schema at runtime and builds its queries dynamically, so it adapts to rich vs simple content models. Authenticates with a GraphQL **token** embedded in the URL (`PREPR_ACCESS_TOKEN`) — no separate CMS URL. |
-| **`contentful`** | Hosted Contentful GraphQL provider. Same full contract. Reads via the Content Delivery API (or the Preview API for drafts); Rich Text fields are rendered to HTML. Authenticates with a **Space ID + Delivery API token** (`CONTENTFUL_SPACE_ID` + `CONTENTFUL_CDA_TOKEN`). SaaS-only — there is no self-hosted Contentful; the free tier suffices for a shop's marketing content. |
-| **`cms`** | Generic Propeller CMS backend. Selectable today; supply connection details per the generated `cms/README.md`. |
+| **`strapi`** | Self-hosted Strapi v5 REST provider (Next, Vue). The scaffold puts the boilerplate's Strapi app, with its content types and seed script, in `my-shop/cms/`. Full contract — pages (typed blocks), articles, category banners, a typed global, static-slug enumeration, image-URL resolution. Configured with `STRAPI_API_URL` (+ optional `STRAPI_API_TOKEN`). |
+| **`prepr`** | Hosted Prepr GraphQL provider (Next, Vue). Same full contract. Introspects the Prepr environment's schema at runtime and builds its queries dynamically, so it adapts to rich vs simple content models. Authenticates with a GraphQL **token** embedded in the URL (`PREPR_ACCESS_TOKEN`) — no separate CMS URL. |
+| **`contentful`** | Hosted Contentful GraphQL provider (Next only). Same full contract. Reads via the Content Delivery API (or the Preview API for drafts); Rich Text fields are rendered to HTML. Authenticates with a **Space ID + Delivery API token** (`CONTENTFUL_SPACE_ID` + `CONTENTFUL_CDA_TOKEN`). SaaS-only — there is no self-hosted Contentful; the free tier suffices for a shop's marketing content. |
 | **`none`** | No CMS (default). Marketing slugs return 404 and the homepage falls back to its built-in static structure. |
 
 All providers implement the same `CmsProvider` contract (pages with typed
@@ -41,25 +40,29 @@ its credentials change.
 install a package or touch the shop's code:
 
 1. Sets `propeller.json -> cms.adapter` to `'strapi'` / `'prepr'` /
-   `'contentful'` / `'cms'` / `null`.
-2. In the shop's `.env.local.example`, flips `CMS_PROVIDER=none` →
-   `CMS_PROVIDER=<provider>` (plus the `NEXT_PUBLIC_` mirror) and **uncomments
-   that provider's credential lines** so you can see exactly what to fill in.
-3. Writes `my-shop/cms/README.md` with backend-specific install/connect steps.
+   `'contentful'` / `null`.
+2. In the shop's env example (`.env.local.example` on Next, `.env.example` on
+   Vue), flips `CMS_PROVIDER=none` → `CMS_PROVIDER=<provider>` (Vue: plus the
+   `VITE_CMS_PROVIDER` mirror) and **uncomments that provider's credential
+   lines** so you can see exactly what to fill in.
+3. Fills `my-shop/cms/`: for `strapi`, the boilerplate's Strapi app; otherwise
+   a README with the connect steps.
+
+Older shops may still carry the removed `cms` adapter in `propeller.json`;
+`doctor` flags it.
 
 To finish: copy `.env.local.example` → `.env.local` and fill in the provider
 credentials. To switch provider later, change `CMS_PROVIDER` (and keep
-`propeller.json -> cms.adapter` in sync so `propeller doctor` checks the right
+`propeller.json -> cms.adapter` in sync so `npm run doctor` checks the right
 one). No re-scaffold or reinstall is needed.
 
 ### Credentials per provider
 
 | Provider | Env vars uncommented |
 |---|---|
-| `strapi` | `STRAPI_API_URL`, `NEXT_PUBLIC_STRAPI_API_URL`, `STRAPI_API_TOKEN` |
+| `strapi` | `STRAPI_API_URL`, `NEXT_PUBLIC_STRAPI_API_URL` (Next), `STRAPI_API_TOKEN` |
 | `prepr` | `PREPR_ACCESS_TOKEN` |
 | `contentful` | `CONTENTFUL_SPACE_ID`, `CONTENTFUL_ENVIRONMENT`, `CONTENTFUL_CDA_TOKEN` (optional: `CONTENTFUL_CPA_TOKEN` + `CONTENTFUL_PREVIEW=true` for drafts) |
-| `cms` | — (supply connection details per `cms/README.md`) |
 
 ## Homepage fallback
 

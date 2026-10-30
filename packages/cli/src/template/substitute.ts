@@ -25,10 +25,9 @@
  *     portalMode, portalModeConstant, channelId, anonymousId, taxZone
  *
  *   CMS
- *     cmsAdapter            'strapi' | 'prepr' | 'cms' | null (truthy boolean via #if)
- *     cmsAdapterTsValue     "'strapi'" / "'prepr'" / "'cms'" / 'null' — TS literal
- *     cmsAdapterJsonValue   '"strapi"' / '"prepr"' / '"cms"' / 'null' — JSON literal
- *     cmsAdapterPackage     full npm package name or ''
+ *     cmsAdapter            'strapi' | 'prepr' | 'contentful' | null (truthy boolean via #if)
+ *     cmsAdapterTsValue     "'strapi'" / "'prepr'" / 'null' — TS literal
+ *     cmsAdapterJsonValue   '"strapi"' / '"prepr"' / 'null' — JSON literal
  *     cmsAdapterDisplay     human-readable, e.g. 'Strapi' / 'none'
  *
  *   Mode-derived UI defaults
@@ -90,7 +89,6 @@ export interface SubstitutionContext {
   cmsAdapter: string | null;
   cmsAdapterTsValue: string;
   cmsAdapterJsonValue: string;
-  cmsAdapterPackage: string;
   cmsAdapterDisplay: string;
 
   // Mode-derived UI defaults
@@ -162,7 +160,6 @@ export function buildContext(
     cmsAdapter: config.cmsAdapter,
     cmsAdapterTsValue: cmsAdapterTsValueFor(config.cmsAdapter),
     cmsAdapterJsonValue: cmsAdapterJsonValueFor(config.cmsAdapter),
-    cmsAdapterPackage: cmsAdapterPackageFor(config.cmsAdapter),
     cmsAdapterDisplay: config.cmsAdapter ?? 'none',
 
     // Mode-derived UI defaults
@@ -200,22 +197,6 @@ function cmsAdapterTsValueFor(adapter: ShopConfig['cmsAdapter']): string {
 
 function cmsAdapterJsonValueFor(adapter: ShopConfig['cmsAdapter']): string {
   return adapter === null ? 'null' : JSON.stringify(adapter);
-}
-
-function cmsAdapterPackageFor(adapter: ShopConfig['cmsAdapter']): string {
-  if (adapter === null) return '';
-  switch (adapter) {
-    case 'strapi':
-      return 'propeller-v2-cms-adapter-strapi';
-    case 'prepr':
-      return 'propeller-v2-cms-adapter-prepr';
-    case 'cms':
-      return 'propeller-v2-cms-adapter-cms';
-    // Contentful ships in the Next boilerplate's lib/cms — there is no separate
-    // adapter package to pin, so there is nothing to install.
-    case 'contentful':
-      return '';
-  }
 }
 
 /** Substitute Handlebars variables in `source`. Errors include the variable name. */

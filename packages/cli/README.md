@@ -51,16 +51,19 @@ npm run dev
 
 ## CMS
 
-`--cms=<provider>` picks the CMS backend: `strapi`, `prepr`, `contentful`, `cms`
-(generic Propeller CMS), or `none` (default).
+`--cms=<provider>` picks the CMS backend: `strapi`, `prepr`, `contentful`, or
+`none` (default); anything else is rejected.
 
-- **CMS is Next-only.** Only the Next stack ships a CMS engine; `--cms` on a Vue
-  or Nuxt scaffold prints a notice and proceeds with no CMS.
-- **No adapter package to install.** Every provider ships inside the Next
+- **Next and Vue.** Next ships Strapi, Prepr and Contentful providers; Vue ships
+  Strapi and Prepr. Nuxt has no CMS engine; `--cms` on a Nuxt scaffold prints a
+  notice and proceeds with no CMS.
+- **`--cms=strapi`** puts the boilerplate's Strapi app (content types and seed
+  script included) in `my-shop/cms/`, ready for `npm install && npm run develop`.
+- **No adapter package to install.** Every provider ships inside the
   boilerplate's `lib/cms` and is selected at runtime from the `CMS_PROVIDER` env
   var. Scaffolding with a CMS sets `CMS_PROVIDER=<provider>` in the shop's
-  `.env.local.example` and uncomments that provider's credential lines, so you
-  just copy the file to `.env.local` and fill in the values (a Strapi URL/token,
+  env example and uncomments that provider's credential lines, so you just copy
+  the file to `.env.local` (Vue: `.env`) and fill in the values (a Strapi URL/token,
   a Prepr access token, or a Contentful Space ID + Delivery API token). See the
   generated `my-shop/cms/README.md` for backend setup, and switch providers
   later by changing `CMS_PROVIDER`.

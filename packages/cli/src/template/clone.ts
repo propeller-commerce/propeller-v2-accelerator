@@ -43,12 +43,13 @@ import {
   isTextPatch,
   textPatchTargetName,
 } from './textPatch';
+import { combineReadme } from './readme';
 import type { ShopConfig } from '../prompts';
 
 /**
  * Upstream boilerplate repositories, keyed by stack.
  *
- * These are the PUBLIC GitHub mirrors (so `npx create-propeller-shop` works
+ * These are the PUBLIC GitHub mirrors (so `npx @propeller-commerce/create-propeller-shop` works
  * for unauthenticated users). Each is a one-way, scrubbed mirror of the
  * private GitLab boilerplate — the mirror CI strips internal dev files
  * (.claude/, CLAUDE.md, memory/, Taskfile.yml) before publishing.
@@ -162,6 +163,48 @@ async function cloneBoilerplate(args: {
 }
 
 /**
+ * Copy one folder of another stack's boilerplate (e.g. the Next boilerplate's
+ * Strapi app at `cms/`) into `dest`. Uses the local override when set,
+ * otherwise a shallow sparse clone. Returns the number of files copied.
+ */
+export async function copyBoilerplateSubdir(args: {
+  stack: ShopConfig['stack'];
+  subdir: string;
+  dest: string;
+  ref?: string;
+}): Promise<number> {
+  const localOverride = process.env[LOCAL_BOILERPLATE_ENV_VARS[args.stack]];
+  if (localOverride) {
+    const src = path.join(localOverride, args.subdir);
+    if (!existsSync(src)) {
+      throw new Error(`${LOCAL_BOILERPLATE_ENV_VARS[args.stack]}=${localOverride} has no "${args.subdir}" folder.`);
+    }
+    return copyDirVerbatim(src, args.dest);
+  }
+
+  const repo = BOILERPLATE_REPOS[args.stack];
+  const ref = args.ref ?? DEFAULT_BOILERPLATE_REF;
+  const tmpRoot = await fs.mkdtemp(path.join(
+    process.env.TEMP || process.env.TMPDIR || '/tmp',
+    `propeller-boilerplate-${args.stack}-${path.basename(args.subdir)}-`
+  ));
+  try {
+    await execa('git', [
+      'clone', '--depth', '1', '--filter=blob:none', '--sparse',
+      '--branch', ref, '--single-branch', repo, tmpRoot,
+    ], { stdio: 'pipe' });
+    await execa('git', ['-C', tmpRoot, 'sparse-checkout', 'set', args.subdir], { stdio: 'pipe' });
+    const src = path.join(tmpRoot, args.subdir);
+    if (!existsSync(src)) {
+      throw new Error(`${repo}#${ref} has no "${args.subdir}" folder.`);
+    }
+    return await copyDirVerbatim(src, args.dest);
+  } finally {
+    await fs.rm(tmpRoot, { recursive: true, force: true });
+  }
+}
+
+/**
  * Step 2: walk the overlay tree and either copy-as-is or render-and-strip
  * `.template.*` files on top of the cloned boilerplate.
  */
@@ -204,11 +247,16 @@ async function applyOverlay(args: {
       filesPatched += 1;
     } else if (isTemplateFile(entry.name)) {
       const source = await fs.readFile(entry.fullPath, 'utf8');
-      const rendered = renderTemplate(source, args.ctx);
+      let rendered = renderTemplate(source, args.ctx);
       const finalPath = path.join(
         path.dirname(destPath),
         stripTemplateSuffix(entry.name)
       );
+      // Keep the boilerplate README below the generated shop summary.
+      if (stripTemplateSuffix(entry.name) === 'README.md' && existsSync(finalPath)) {
+        const original = await fs.readFile(finalPath, 'utf8');
+        rendered = combineReadme(rendered, original, 'Boilerplate guide');
+      }
       await fs.writeFile(finalPath, rendered, 'utf8');
       filesTemplated += 1;
     } else {
@@ -402,23 +450,19 @@ const VERBATIM_SKIP_TOP = new Set([
   'coverage',
   '.claude',
   'memory',
+  // Strapi build cache and local SQLite database.
+  '.strapi',
+  '.tmp',
 ]);
 
 /**
- * Top-level file names that the verbatim copy MUST NOT pull. Mostly env
- * files: when the local-override is used in dev, the upstream's real `.env`
- * (with live API keys) would otherwise leak into the scaffolded shop. The
- * boilerplate's `.env.example` is the SOURCE OF TRUTH for the scaffold;
- * shops fill in real values themselves.
+ * Env files the verbatim copy MUST NOT pull: with the local override, a
+ * checkout's real `.env*` (live keys, backups like `.env.bak`) would leak into
+ * the shop. Only `*.example` files are copied; shops fill in real values.
  */
-const VERBATIM_SKIP_FILE = new Set([
-  '.env',
-  '.env.local',
-  '.env.development',
-  '.env.production',
-  '.env.development.local',
-  '.env.production.local',
-]);
+export function isSkippedEnvFile(name: string): boolean {
+  return (name === '.env' || name.startsWith('.env.')) && !name.endsWith('.example');
+}
 
 /**
  * Plain recursive copy of a directory tree. Skips heavy/junk top-level
@@ -478,11 +522,10 @@ async function walkWithSkip(
   for (const entry of entries) {
     if (SKIP_NAMES.has(entry.name)) continue;
     // Only apply skip-dir check to directories so a file with the same name
-    // (rare) doesn't get pruned. Skip-file applies at the top level only,
-    // because nested `.env`-like files are unrelated to the boilerplate's
-    // own runtime config.
+    // (rare) doesn't get pruned. Env files are skipped at every depth: the
+    // bundled Strapi app's `cms/.env` holds real secrets too.
     if (entry.isDirectory() && skipDirNames.has(entry.name)) continue;
-    if (!entry.isDirectory() && here === root && VERBATIM_SKIP_FILE.has(entry.name)) continue;
+    if (!entry.isDirectory() && isSkippedEnvFile(entry.name)) continue;
     const fullPath = path.join(here, entry.name);
     await visit({ fullPath, name: entry.name, isDirectory: entry.isDirectory() });
     if (entry.isDirectory()) {

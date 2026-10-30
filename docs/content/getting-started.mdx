@@ -20,7 +20,7 @@ sidebar_position: 2
 The fastest path:
 
 ```bash
-npx create-propeller-shop@latest my-shop \
+npx @propeller-commerce/create-propeller-shop@latest my-shop \
   --stack=next \
   --mode=hybrid \
   --cms=strapi \
@@ -43,7 +43,7 @@ The result lands at `./my-shop/`:
 ```
 my-shop/
   frontend/                 # the runnable shop
-  cms/                      # CMS install instructions (you install the CMS yourself)
+  cms/                      # CMS backend (Strapi app) or connection notes; only with --cms
 ```
 
 (`public_html/` is **not** used — that segment was dropped in `0.3.2`.)
@@ -62,17 +62,17 @@ serves at `http://localhost:5173`.
 ## Verify the shop is healthy
 
 ```bash
-# from anywhere inside the shop
-npx propeller doctor
+# from inside frontend/ (or the shop root of a no-CMS shop)
+npm run doctor
 ```
 
 `doctor` re-reads the manifest at `frontend/propeller.json` and checks
 that:
 
 - The pinned packages are installed.
-- `data/config.ts` declares the right portal mode.
+- The env file sets the declared portal mode.
 - The B2B route tree exists if (and only if) the mode says it should.
-- The declared CMS adapter is installed.
+- `CMS_PROVIDER` selects the declared CMS adapter.
 
 Green checks + zero red = healthy shop. See [doctor](/doctor) for the
 full rule list and exit semantics.

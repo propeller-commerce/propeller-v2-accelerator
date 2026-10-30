@@ -6,11 +6,11 @@
  *
  * v0.1 checks:
  *   - propeller.json validates against the Zod schema
- *   - All `propeller-v2-*` packages declared in package.json resolve
+ *   - All `@propeller-commerce/*` packages declared in package.json resolve
  *     against installed copies (no missing deps)
- *   - data/config.ts (or src/lib/config.ts) contains the declared
- *     portalMode literal (grep — not a full parse)
+ *   - the PORTAL_MODE var(s) in the env file match the declared portalMode
  *   - B2B routes exist iff mode !== 'b2c' AND the matching features flag is on
+ *   - Strapi shops: the preview secret matches between cms/.env and the frontend env
  *   - the configured channel resolves against the live backend, and its
  *     catalog root actually holds products
  *
@@ -64,8 +64,12 @@ export async function runDoctor(opts: DoctorOptions): Promise<number> {
       devDependencies?: Record<string, string>;
     };
     const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-    for (const name of Object.keys(deps).filter((d) => d.startsWith('propeller-v2-'))) {
-      const installed = path.join(frontend, 'node_modules', name);
+    const propellerDeps = Object.keys(deps).filter((d) => d.startsWith('@propeller-commerce/'));
+    if (propellerDeps.length === 0) {
+      findings.push({ level: 'warn', message: 'package.json declares no @propeller-commerce/* package.' });
+    }
+    for (const name of propellerDeps) {
+      const installed = path.join(frontend, 'node_modules', ...name.split('/'), 'package.json');
       if (await pathExists(installed)) {
         findings.push({ level: 'ok', message: `${name} installed.` });
       } else {
@@ -76,14 +80,15 @@ export async function runDoctor(opts: DoctorOptions): Promise<number> {
     findings.push({ level: 'warn', message: 'frontend/package.json missing.' });
   }
 
-  // 3. Portal mode literal in config.
-  await checkPortalMode(frontend, manifest.shop.portalMode, findings);
+  // 3. Portal mode in the env vs the manifest.
+  await checkPortalMode(frontend, manifest, findings);
 
   // 4. B2B routes presence vs mode.
   await checkB2BRoutesShape(frontend, manifest, findings);
 
   // 5. CMS adapter wiring.
   await checkCmsAdapter(frontend, manifest, findings);
+  if (manifest.cms.adapter === 'strapi') await checkStrapiPreview(frontend, manifest, findings);
 
   // 6. Live backend check.
   await checkBackend(frontend, findings);
@@ -102,37 +107,57 @@ async function locateManifest(cwd: string): Promise<string | null> {
   return null;
 }
 
+/** Portal-mode vars each boilerplate reads; Nuxt reads a server and a public copy. */
+const PORTAL_MODE_VARS: Record<PropellerJson['template']['stack'], string[]> = {
+  next: ['NEXT_PUBLIC_PORTAL_MODE'],
+  vue: ['VITE_PORTAL_MODE'],
+  nuxt: ['BOILERPLATE_PORTAL_MODE', 'NUXT_PUBLIC_PORTAL_MODE'],
+};
+
+/** Active env file then its example, per stack. */
+const ENV_FILES: Record<PropellerJson['template']['stack'], [string, string]> = {
+  next: ['.env.local', '.env.local.example'],
+  vue: ['.env', '.env.example'],
+  nuxt: ['.env', '.env.example'],
+};
+
+/** The active env file, falling back to the shipped example. Null when neither exists. */
+async function readStackEnv(
+  frontend: string,
+  stack: PropellerJson['template']['stack']
+): Promise<{ file: string; env: Record<string, string> } | null> {
+  for (const name of ENV_FILES[stack]) {
+    const file = path.join(frontend, name);
+    if (await pathExists(file)) return { file: name, env: parseEnv(await fs.readFile(file, 'utf8')) };
+  }
+  return null;
+}
+
 async function checkPortalMode(
   frontend: string,
-  expected: string,
+  manifest: PropellerJson,
   findings: Finding[]
 ): Promise<void> {
-  const candidates = [
-    path.join(frontend, 'data', 'config.ts'),
-    path.join(frontend, 'src', 'lib', 'config.ts'),
-    path.join(frontend, 'app', 'utils', 'config.ts'),
-  ];
-  for (const c of candidates) {
-    if (await pathExists(c)) {
-      const body = await fs.readFile(c, 'utf8');
-      // Find any line that mentions portalMode, then check the expected literal nearby.
-      const hasMode = body.includes('portalMode') || body.includes('PORTAL_MODE');
-      if (!hasMode) {
-        findings.push({ level: 'warn', message: `${path.relative(frontend, c)} has no portalMode reference.` });
-        return;
-      }
-      if (body.includes(`'${expected}'`)) {
-        findings.push({ level: 'ok', message: `portalMode '${expected}' matches ${path.relative(frontend, c)}.` });
-      } else {
-        findings.push({
-          level: 'fail',
-          message: `propeller.json declares portalMode '${expected}' but ${path.relative(frontend, c)} does not contain that literal.`,
-        });
-      }
-      return;
+  const expected = manifest.shop.portalMode;
+  const found = await readStackEnv(frontend, manifest.template.stack);
+  if (!found) {
+    findings.push({ level: 'warn', message: 'No env file or env example found — skipping the portalMode check.' });
+    return;
+  }
+  for (const key of PORTAL_MODE_VARS[manifest.template.stack]) {
+    const raw = found.env[key];
+    // Every boilerplate falls back to 'open' when the var is unset.
+    const actual = (raw || 'open').trim().toLowerCase();
+    const shown = raw ? `${key}=${raw}` : `${key} unset (defaults to 'open')`;
+    if (actual === expected) {
+      findings.push({ level: 'ok', message: `portalMode '${expected}' matches ${found.file} (${shown}).` });
+    } else {
+      findings.push({
+        level: 'fail',
+        message: `propeller.json declares portalMode '${expected}' but ${found.file} has ${shown} — set ${key}=${expected} or update propeller.json.`,
+      });
     }
   }
-  findings.push({ level: 'warn', message: 'No data/config.ts or src/lib/config.ts found — skipping portalMode check.' });
 }
 
 async function checkB2BRoutesShape(
@@ -218,7 +243,16 @@ async function checkCmsAdapter(
   // things: (1) the provider engine actually ships in this shop, and (2) the
   // env selects the declared provider.
   const adapter = manifest.cms.adapter;
-  const libCms = path.join(frontend, 'lib', 'cms');
+  if (adapter === 'cms') {
+    findings.push({
+      level: 'warn',
+      message:
+        "propeller.json declares cms.adapter='cms', which no boilerplate supports — set it to strapi, prepr, contentful or null, and CMS_PROVIDER to match.",
+    });
+    return;
+  }
+  const stack = manifest.template.stack;
+  const libCms = path.join(frontend, ...(stack === 'vue' ? ['src', 'lib', 'cms'] : ['lib', 'cms']));
   if (!(await pathExists(libCms))) {
     findings.push({
       level: 'warn',
@@ -227,20 +261,10 @@ async function checkCmsAdapter(
     return;
   }
 
-  // Check the active env first (.env.local), falling back to the example.
-  const envActive = path.join(frontend, '.env.local');
-  const envExample = path.join(frontend, '.env.local.example');
-  const envPath = (await pathExists(envActive)) ? envActive : envExample;
-  const which = envPath === envActive ? '.env.local' : '.env.local.example';
-  let envText = '';
-  try {
-    envText = await fs.readFile(envPath, 'utf8');
-  } catch {
-    /* no env file — handled below */
-  }
-
-  const m = envText.match(/^CMS_PROVIDER=(.+)$/m);
-  const selected = m?.[1]?.trim();
+  // Check the active env first, falling back to the example.
+  const found = await readStackEnv(frontend, stack);
+  const which = found?.file ?? ENV_FILES[stack][0];
+  const selected = found?.env.CMS_PROVIDER?.trim();
   if (selected === adapter) {
     findings.push({ level: 'ok', message: `CMS provider '${adapter}' wired in ${which} (CMS_PROVIDER=${adapter}).` });
   } else if (selected) {
@@ -253,6 +277,33 @@ async function checkCmsAdapter(
       level: 'warn',
       message: `propeller.json declares cms.adapter='${adapter}' but CMS_PROVIDER is not set in ${which} — set CMS_PROVIDER=${adapter} to activate the provider.`,
     });
+  }
+}
+
+/** Strapi preview needs cms/.env PREVIEW_SECRET to equal the frontend's STRAPI_PREVIEW_SECRET; values are never printed. */
+async function checkStrapiPreview(frontend: string, manifest: PropellerJson, findings: Finding[]): Promise<void> {
+  const frontendFile = ENV_FILES[manifest.template.stack][0];
+  const cmsEnvPath = path.join(frontend, '..', 'cms', '.env');
+  const cmsSecret = (await pathExists(cmsEnvPath))
+    ? parseEnv(await fs.readFile(cmsEnvPath, 'utf8')).PREVIEW_SECRET
+    : undefined;
+  const frontendEnvPath = path.join(frontend, frontendFile);
+  const frontendSecret = (await pathExists(frontendEnvPath))
+    ? parseEnv(await fs.readFile(frontendEnvPath, 'utf8')).STRAPI_PREVIEW_SECRET
+    : undefined;
+  const missing = [
+    cmsSecret ? null : 'PREVIEW_SECRET in ../cms/.env',
+    frontendSecret ? null : `STRAPI_PREVIEW_SECRET in ${frontendFile}`,
+  ].filter(Boolean);
+  if (missing.length > 0) {
+    findings.push({ level: 'warn', message: `Strapi preview is off — set ${missing.join(' and ')} (same value).` });
+  } else if (cmsSecret !== frontendSecret) {
+    findings.push({
+      level: 'fail',
+      message: `Strapi preview secrets differ — PREVIEW_SECRET in ../cms/.env must equal STRAPI_PREVIEW_SECRET in ${frontendFile}.`,
+    });
+  } else {
+    findings.push({ level: 'ok', message: `Strapi preview secret matches between ../cms/.env and ${frontendFile}.` });
   }
 }
 
@@ -433,21 +484,26 @@ async function readActiveEnv(frontend: string): Promise<Record<string, string> |
   for (const name of ['.env.local', '.env']) {
     const file = path.join(frontend, name);
     if (!(await pathExists(file))) continue;
-    const env: Record<string, string> = {};
-    for (const line of (await fs.readFile(file, 'utf8')).split(/\r?\n/)) {
-      const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
-      if (!m) continue;
-      // Strip a trailing `# comment` from unquoted values the way dotenv does.
-      // Without this, `CHANNEL_ID=621 # the channel` parses as the whole
-      // string and every check downstream reports a nonsense id.
-      const value = m[2].trim();
-      env[m[1]] = /^["']/.test(value)
-        ? value.replace(/^["']|["']$/g, '')
-        : value.split(/\s+#/)[0].trim();
-    }
-    return env;
+    return parseEnv(await fs.readFile(file, 'utf8'));
   }
   return null;
+}
+
+/** dotenv-style parse of `KEY=value` lines; commented lines are ignored. */
+function parseEnv(text: string): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const line of text.split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+    if (!m) continue;
+    // Strip a trailing `# comment` from unquoted values the way dotenv does.
+    // Without this, `CHANNEL_ID=621 # the channel` parses as the whole
+    // string and every check downstream reports a nonsense id.
+    const value = m[2].trim();
+    env[m[1]] = /^["']/.test(value)
+      ? value.replace(/^["']|["']$/g, '')
+      : value.split(/\s+#/)[0].trim();
+  }
+  return env;
 }
 
 /**

@@ -7,19 +7,36 @@
  */
 
 import { input, select, confirm } from '@inquirer/prompts';
-import type {
-  ShopMode,
-  PortalMode,
-  CmsAdapter,
-  PspProvider,
-  Stack,
+import {
+  SUPPORTED_CMS_ADAPTERS,
+  type ShopMode,
+  type PortalMode,
+  type ScaffoldCmsAdapter,
+  type PspProvider,
+  type Stack,
 } from '../schema/propellerJson';
+
+type CmsChoice = NonNullable<ScaffoldCmsAdapter> | 'none';
+
+/** CMS providers each boilerplate ships an engine for. Nuxt has none. */
+const CMS_BY_STACK: Record<Stack, ReadonlyArray<NonNullable<ScaffoldCmsAdapter>>> = {
+  next: SUPPORTED_CMS_ADAPTERS,
+  vue: ['strapi', 'prepr'],
+  nuxt: [],
+};
+
+const CMS_LABELS: Record<NonNullable<ScaffoldCmsAdapter>, string> = {
+  strapi: 'Strapi (open-source headless CMS)',
+  prepr: 'Prepr (headless GraphQL CMS)',
+  contentful: 'Contentful (hosted headless CMS)',
+};
 
 export interface PromptDefaults {
   name?: string;
   stack?: Stack;
   mode?: ShopMode;
-  cms?: CmsAdapter | 'none';
+  /** Raw `--cms` value; validated in `collectShopConfig`. */
+  cms?: string;
   psp?: PspProvider | 'none';
   spareParts?: boolean;
   punchout?: boolean;
@@ -42,11 +59,11 @@ export interface ShopConfig {
   name: string;
   stack: Stack;
   mode: ShopMode;
-  cmsAdapter: CmsAdapter; // null when --cms=none
+  cmsAdapter: ScaffoldCmsAdapter; // null when --cms=none
   psp: PspProvider; // null when --psp=none
   spareParts: boolean; // false when --spare-parts=no
   punchout: boolean; // false when --punchout=no (the default)
-  tracking: boolean; // false when --tracking=no (the default); Next only
+  tracking: boolean; // false when --tracking=no (the default)
   locales: string[];
   defaultLocale: string;
   currency: string;
@@ -65,6 +82,14 @@ function defaultPortalForMode(mode: ShopMode): PortalMode {
 /** Prompt for everything not already provided, with sensible defaults. */
 export async function collectShopConfig(defaults: PromptDefaults): Promise<ShopConfig> {
   const yes = defaults.yes === true;
+
+  // Reject an unknown --cms before asking anything else.
+  const cmsValues: string[] = [...SUPPORTED_CMS_ADAPTERS, 'none'];
+  if (defaults.cms !== undefined && !cmsValues.includes(defaults.cms)) {
+    throw new Error(
+      `Unknown --cms value "${defaults.cms}". Supported: ${cmsValues.join(', ')}.`
+    );
+  }
 
   // Name has no sensible default — required either as flag or via prompt.
   const name =
@@ -100,38 +125,40 @@ export async function collectShopConfig(defaults: PromptDefaults): Promise<ShopC
           ],
         }));
 
-  // CMS is a Next-only capability today: only the Next boilerplate ships a
-  // `lib/cms` provider engine (Strapi / Prepr / Contentful, selected at runtime
-  // by the CMS_PROVIDER env var). The Vue and Nuxt boilerplates have no CMS subsystem,
-  // so a CMS choice there could not be honoured — force `none` and tell the
-  // user, rather than silently scaffold a shop whose CMS selection does nothing.
-  let cmsChoice: CmsAdapter | 'none';
-  if (stack === 'next') {
-    cmsChoice =
-      defaults.cms ??
-      (yes
-        ? 'none'
-        : await select<CmsAdapter | 'none'>({
-            message: 'CMS adapter?',
-            choices: [
-              { name: 'Strapi (open-source headless CMS)', value: 'strapi' },
-              { name: 'Prepr (headless GraphQL CMS)', value: 'prepr' },
-              { name: 'Contentful (hosted headless CMS)', value: 'contentful' },
-              { name: 'Generic Propeller CMS', value: 'cms' },
-              { name: 'None — homepage falls back to static, marketing slugs return 404', value: 'none' },
-            ],
-          }));
-  } else {
+  // Next ships Strapi / Prepr / Contentful providers, Vue ships Strapi / Prepr,
+  // both selected at runtime by CMS_PROVIDER. Nuxt has no CMS engine.
+  const stackCms = CMS_BY_STACK[stack];
+  let cmsChoice: CmsChoice;
+  if (stackCms.length === 0) {
     if (defaults.cms && defaults.cms !== 'none') {
       // eslint-disable-next-line no-console
       console.warn(
-        `Note: --cms=${defaults.cms} is ignored for the ${stack} stack — only the ` +
-          `Next boilerplate ships a CMS engine. Scaffolding with no CMS.`
+        `Note: --cms=${defaults.cms} is ignored for the ${stack} stack — the ${stack} ` +
+          `boilerplate has no CMS engine (only next and vue do). Scaffolding with no CMS.`
       );
     }
     cmsChoice = 'none';
+  } else if (defaults.cms !== undefined) {
+    const requested = defaults.cms as CmsChoice;
+    if (requested !== 'none' && !stackCms.includes(requested)) {
+      throw new Error(
+        `--cms=${requested} is not available for the ${stack} stack. ` +
+          `Supported for ${stack}: ${[...stackCms, 'none'].join(', ')}.`
+      );
+    }
+    cmsChoice = requested;
+  } else {
+    cmsChoice = yes
+      ? 'none'
+      : await select<CmsChoice>({
+          message: 'CMS adapter?',
+          choices: [
+            ...stackCms.map((value) => ({ name: CMS_LABELS[value], value })),
+            { name: 'None — homepage falls back to static, marketing slugs return 404', value: 'none' as const },
+          ],
+        });
   }
-  const cmsAdapter: CmsAdapter = cmsChoice === 'none' ? null : cmsChoice;
+  const cmsAdapter: ScaffoldCmsAdapter = cmsChoice === 'none' ? null : cmsChoice;
 
   // Payment service provider. Unlike the CMS this is stack-agnostic — all three
   // boilerplates ship both PSP integrations behind the same env switch. Picking
@@ -178,30 +205,19 @@ export async function collectShopConfig(defaults: PromptDefaults): Promise<ShopC
         }));
 
   // Behaviour tracking: the /tracker dashboard, which needs a MySQL database
-  // the shop owner provides. Opt-IN and Next-only — the Vue and Nuxt
-  // boilerplates ship no /tracker, and most shops never want one.
+  // the shop owner provides. Opt-IN; all three boilerplates ship /tracker.
   //
   // Answering yes does NOT provision anything: the scaffold runs on a laptop
   // that has no route to the shop's database. It enables the feature flag and
   // tells the user to run `npm run tracking:init` against their own server.
   const tracking =
-    stack === 'next'
-      ? defaults.tracking ??
-        (yes
-          ? false
-          : await confirm({
-              message: 'Set up the behaviour-tracking dashboard (/tracker)? Needs a MySQL database.',
-              default: false,
-            }))
-      : false;
-
-  if (stack !== 'next' && defaults.tracking) {
-    // eslint-disable-next-line no-console
-    console.warn(
-      `Note: --tracking is ignored for the ${stack} stack — only the Next ` +
-        `boilerplate ships the /tracker dashboard.`
-    );
-  }
+    defaults.tracking ??
+    (yes
+      ? false
+      : await confirm({
+          message: 'Set up the behaviour-tracking dashboard (/tracker)? Needs a MySQL database.',
+          default: false,
+        }));
 
   const localesStr =
     defaults.locales?.join(',') ??

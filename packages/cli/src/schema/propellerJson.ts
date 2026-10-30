@@ -18,7 +18,10 @@ import { z } from 'zod';
 
 export const ShopMode = z.enum(['b2b', 'b2c', 'hybrid']);
 export const PortalMode = z.enum(['open', 'semi-closed', 'closed']);
-export const CmsAdapter = z.enum(['strapi', 'cms', 'prepr', 'contentful']).nullable();
+/** CMS providers a new shop can be scaffolded with. */
+export const SUPPORTED_CMS_ADAPTERS = ['strapi', 'prepr', 'contentful'] as const;
+/** Legacy `cms` stays readable so older manifests still parse; doctor flags it. */
+export const CmsAdapter = z.enum(['strapi', 'prepr', 'contentful', 'cms']).nullable();
 export const Stack = z.enum(['next', 'vue', 'nuxt']);
 /** Payment service provider. `null` = no PSP (order → thank-you directly). */
 export const PspProvider = z.enum(['mollie', 'multisafepay']).nullable();
@@ -76,7 +79,7 @@ export const PropellerJsonSchema = z.object({
     /**
      * The /tracker behaviour dashboard. False (the default) leaves it dormant:
      * the code ships either way, but with no TRACKING_DB_* configured the shop
-     * collects nothing and the dashboard says so. Next-only. Defaulted so shops
+     * collects nothing and the dashboard says so. Defaulted so shops
      * scaffolded before this flag existed still validate.
      */
     tracking: z.boolean().default(false),
@@ -112,6 +115,8 @@ export type PropellerJson = z.infer<typeof PropellerJsonSchema>;
 export type ShopMode = z.infer<typeof ShopMode>;
 export type PortalMode = z.infer<typeof PortalMode>;
 export type CmsAdapter = z.infer<typeof CmsAdapter>;
+/** A CMS adapter the scaffolder can write; `null` = no CMS. */
+export type ScaffoldCmsAdapter = (typeof SUPPORTED_CMS_ADAPTERS)[number] | null;
 export type Stack = z.infer<typeof Stack>;
 export type PspProvider = z.infer<typeof PspProvider>;
 

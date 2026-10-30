@@ -16,10 +16,12 @@ import {
   buildPropellerJson,
 } from '../schema/propellerJson';
 import { buildContext, type SubstitutionContext } from '../template/substitute';
-import { scaffoldFromBoilerplate } from '../template/clone';
+import { copyBoilerplateSubdir, scaffoldFromBoilerplate } from '../template/clone';
 import { buildCmsReadme } from '../template/cmsReadme';
-import { removeEnvKeys, setEnvVar } from '../template/envEdit';
+import { combineReadme } from '../template/readme';
+import { ensureEnvVar, removeEnvKeys, setEnvVar } from '../template/envEdit';
 import { pruneLockDependencies } from '../template/lockfile';
+import { STOREFRONT_DEV_URL, documentPreviewSecret, newPreviewSecret, writeStrapiEnv } from '../template/strapiEnv';
 import { pruneLocales } from '../template/locales';
 import { getCliVersion } from '../util/version';
 
@@ -94,6 +96,54 @@ const LOCALES_VAR: Partial<Record<ShopConfig['stack'], string>> = {
   nuxt: 'BOILERPLATE_LOCALES',
 };
 
+/** Portal-mode vars per stack; Nuxt reads a server and a public copy. */
+const PORTAL_MODE_VARS: Record<ShopConfig['stack'], string[]> = {
+  next: ['NEXT_PUBLIC_PORTAL_MODE'],
+  vue: ['VITE_PORTAL_MODE'],
+  nuxt: ['BOILERPLATE_PORTAL_MODE', 'NUXT_PUBLIC_PORTAL_MODE'],
+};
+
+/** Public site origin var per stack. */
+const SITE_URL_VAR: Record<ShopConfig['stack'], string> = {
+  next: 'NEXT_PUBLIC_SITE_URL',
+  vue: 'VITE_SITE_URL',
+  nuxt: 'NUXT_PUBLIC_SITE_URL',
+};
+
+/** ISO 4217 currency code var per stack. */
+const CURRENCY_CODE_VAR: Record<ShopConfig['stack'], string> = {
+  next: 'NEXT_PUBLIC_CURRENCY_CODE',
+  vue: 'VITE_CURRENCY_CODE',
+  nuxt: 'NUXT_PUBLIC_CURRENCY_CODE',
+};
+
+/** Client-side tracking switch; Next has none (the server flag covers it). */
+const PUBLIC_TRACKING_VAR: Partial<Record<ShopConfig['stack'], string>> = {
+  vue: 'VITE_TRACKING_ENABLED',
+  nuxt: 'NUXT_PUBLIC_TRACKING_ENABLED',
+};
+
+/** Commented credential lines to activate per stack and CMS provider. */
+const CMS_CREDENTIAL_LINES: Record<'next' | 'vue', Partial<Record<NonNullable<ShopConfig['cmsAdapter']>, string[]>>> = {
+  next: {
+    strapi: [
+      '# STRAPI_API_URL=http://localhost:1337',
+      '# NEXT_PUBLIC_STRAPI_API_URL=http://localhost:1337',
+      '# STRAPI_API_TOKEN=',
+    ],
+    prepr: ['# PREPR_ACCESS_TOKEN=your-prepr-graphql-token'],
+    contentful: [
+      '# CONTENTFUL_SPACE_ID=',
+      '# CONTENTFUL_ENVIRONMENT=master',
+      '# CONTENTFUL_CDA_TOKEN=        # Content Delivery API token (published content)',
+    ],
+  },
+  vue: {
+    strapi: ['# STRAPI_API_URL=http://localhost:1337', '# STRAPI_API_TOKEN='],
+    prepr: ['# PREPR_ACCESS_TOKEN=your-prepr-graphql-token'],
+  },
+};
+
 export interface ScaffoldOptions extends PromptDefaults {
   yes?: boolean;
   cwd?: string;
@@ -122,6 +172,7 @@ export async function runScaffold(opts: ScaffoldOptions): Promise<void> {
 
   // 3. Scaffold inside a try/rollback frame.
   const spinner = ora({ text: `Scaffolding ${config.name}…`, color: 'cyan' }).start();
+  let previewSecret: string | null = null;
   try {
     await fs.mkdir(frontend, { recursive: true });
     if (cmsFolder) await fs.mkdir(cmsFolder, { recursive: true });
@@ -211,8 +262,8 @@ export async function runScaffold(opts: ScaffoldOptions): Promise<void> {
     // 5b. Activate the chosen CMS provider in the env example. The boilerplate
     //     ships every provider and selects one at runtime from CMS_PROVIDER
     //     (default `none`); a `--cms=<x>` shop just needs that var flipped and
-    //     the matching credential lines uncommented. Next-only — the other
-    //     stacks force cmsAdapter=null (no CMS engine), so this is a no-op there.
+    //     the matching credential lines uncommented. Next and Vue only — Nuxt
+    //     forces cmsAdapter=null (no CMS engine).
     if (config.cmsAdapter) {
       await activateCmsProviderEnv(frontend, config.stack, config.cmsAdapter);
     }
@@ -222,14 +273,26 @@ export async function runScaffold(opts: ScaffoldOptions): Promise<void> {
     //     file only documents capabilities this shop actually has.
     await applyFeatureEnv(frontend, config);
 
-    // 6. Write the CMS folder README (only when there is a cms/ folder — a
+    // 6. Fill the cms/ folder and write its README (only when there is one — a
     //    no-CMS shop has no CMS folder and no CMS install instructions).
     if (cmsFolder) {
-      await fs.writeFile(
-        path.join(cmsFolder, 'README.md'),
-        buildCmsReadme(config.cmsAdapter, config.name),
-        'utf8'
-      );
+      const strapiFiles = await placeCmsBackend(config, frontend, cmsFolder);
+      // One preview secret per shop, written only to the gitignored cms/.env.
+      if (strapiFiles > 0) {
+        const secret = newPreviewSecret();
+        if (await writeStrapiEnv(cmsFolder, secret, STOREFRONT_DEV_URL[config.stack])) previewSecret = secret;
+      }
+      const readmePath = path.join(cmsFolder, 'README.md');
+      let readme = buildCmsReadme(config.cmsAdapter, config.name, {
+        stack: config.stack,
+        strapiApp: strapiFiles > 0,
+        seedScript: strapiFiles > 0 ? await findScript(cmsFolder, /^seed/) : null,
+        strapiEnvGenerated: previewSecret !== null,
+      });
+      if (await pathExists(readmePath)) {
+        readme = combineReadme(readme, await fs.readFile(readmePath, 'utf8'), 'Strapi reference');
+      }
+      await fs.writeFile(readmePath, readme, 'utf8');
     }
 
     spinner.succeed(
@@ -292,7 +355,7 @@ export async function runScaffold(opts: ScaffoldOptions): Promise<void> {
   //    independently, so a freshly published CLI is routinely paired with an
   //    older boilerplate — printing `npm run tracking:init` at someone whose
   //    package.json has no such script is worse than saying nothing.
-  printNextSteps(config, root, await hasScript(frontend, 'tracking:init'));
+  printNextSteps(config, root, await hasScript(frontend, 'tracking:init'), previewSecret);
 }
 
 /** Does the scaffolded app define this npm script? False if anything is unreadable. */
@@ -305,7 +368,51 @@ async function hasScript(frontend: string, name: string): Promise<boolean> {
   }
 }
 
-function printNextSteps(config: ShopConfig, root: string, hasTrackingInstaller: boolean): void {
+/** First npm script in `dir/package.json` whose name matches, or null. */
+async function findScript(dir: string, pattern: RegExp): Promise<string | null> {
+  try {
+    const pkg = JSON.parse(await fs.readFile(path.join(dir, 'package.json'), 'utf8'));
+    return Object.keys(pkg?.scripts ?? {}).find((name) => pattern.test(name)) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Put the CMS backend in `<root>/cms`. Strapi: move the Next boilerplate's
+ * bundled app out of `frontend/cms`, or (Vue) fetch it from the Next
+ * boilerplate. Hosted CMSes need no backend, so the bundled Strapi app goes.
+ * Returns the number of Strapi app files placed (0 = none).
+ */
+async function placeCmsBackend(config: ShopConfig, frontend: string, cmsFolder: string): Promise<number> {
+  const bundled = path.join(frontend, 'cms');
+  const hasBundled = await pathExists(path.join(bundled, 'package.json'));
+  if (config.cmsAdapter !== 'strapi') {
+    if (hasBundled) await fs.rm(bundled, { recursive: true, force: true });
+    return 0;
+  }
+  if (hasBundled) {
+    await fs.rm(cmsFolder, { recursive: true, force: true });
+    await fs.rename(bundled, cmsFolder);
+    return (await fs.readdir(cmsFolder, { recursive: true })).length;
+  }
+  try {
+    return await copyBoilerplateSubdir({ stack: 'next', subdir: 'cms', dest: cmsFolder });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      chalk.yellow(`\nCould not fetch the Strapi app (${(err as Error).message}); see cms/README.md.`)
+    );
+    return 0;
+  }
+}
+
+function printNextSteps(
+  config: ShopConfig,
+  root: string,
+  hasTrackingInstaller: boolean,
+  previewSecret: string | null
+): void {
   const hasCms = config.cmsAdapter !== null;
   // CMS shops nest the app under `frontend/`; no-CMS shops are flat at root.
   const relApp = hasCms ? path.join(config.name, 'frontend') : config.name;
@@ -334,6 +441,12 @@ function printNextSteps(config: ShopConfig, root: string, hasTrackingInstaller: 
       hasCms
         ? `  See ${relCms}/README.md to install the ${config.cmsAdapter} backend.`
         : `  No CMS configured — the homepage uses the built-in static page.`,
+      previewSecret
+        ? `  Strapi preview enabled (open an entry in the Strapi admin, click Preview). Add this\n` +
+          `  line to ${envTarget}; it equals PREVIEW_SECRET in ${relCms}/.env — keep the two\n` +
+          `  secrets equal in every deployment:\n` +
+          `    STRAPI_PREVIEW_SECRET=${previewSecret}`
+        : null,
       config.psp
         ? `  Payments via ${config.psp} — add its API keys to ${envTarget}.`
         : `  No payment provider — checkout places the order and goes straight to thank-you.`,
@@ -354,6 +467,9 @@ function printNextSteps(config: ShopConfig, root: string, hasTrackingInstaller: 
           `  boilerplate predates the schema installer, so create the tables from its\n` +
           `  db/ directory by hand, or update it to get \`npm run tracking:init\`.`
         : null,
+      config.tracking
+        ? `  The /tracker dashboard is gated: set TRACKER_ACCESS_SECRET in ${envTarget} to open it.`
+        : null,
       '',
     ]
       .filter((line) => line !== null)
@@ -364,60 +480,41 @@ function printNextSteps(config: ShopConfig, root: string, hasTrackingInstaller: 
 /**
  * Activate the chosen CMS provider in the scaffolded shop's env example.
  *
- * The Next boilerplate's `.env.local.example` ships a CMS section with
- * `CMS_PROVIDER=none` and a commented block of provider credentials. Flipping a
- * shop to a real CMS is just: set CMS_PROVIDER (+ its public mirror) to the
- * chosen value and uncomment the matching credential lines so the user sees
- * exactly what to fill in. The provider code already lives in the boilerplate's
- * `lib/cms` — no package install, no code wiring.
+ * The Next and Vue boilerplates ship a CMS section with `CMS_PROVIDER=none` and
+ * a commented block of provider credentials. Flipping a shop to a real CMS is
+ * just: set CMS_PROVIDER (Vue: + its `VITE_` mirror) to the chosen value and
+ * uncomment the matching credential lines so the user sees exactly what to fill
+ * in. The provider code already lives in the boilerplate's `lib/cms` (Vue:
+ * `src/lib/cms`) — no package install, no code wiring.
  *
- * Only the Next stack has a CMS engine (and thus an env example with this
- * section), so this runs for `stack === 'next'` only; other stacks never reach
- * here (their cmsAdapter is forced to null upstream).
+ * Nuxt has no CMS engine, so it never reaches here (cmsAdapter is forced null).
  *
- * Idempotent-ish and defensive: if the expected lines aren't present (an older
- * boilerplate without the CMS section), it leaves the file untouched rather
- * than throwing — the shop is still usable, just not pre-wired.
+ * Defensive: lines that aren't present (an older boilerplate) are left alone
+ * rather than throwing — the shop is still usable, just not pre-wired.
  */
 async function activateCmsProviderEnv(
   frontend: string,
   stack: ShopConfig['stack'],
   adapter: NonNullable<ShopConfig['cmsAdapter']>
 ): Promise<void> {
-  if (stack !== 'next') return;
-  const envPath = path.join(frontend, '.env.local.example');
+  if (stack === 'nuxt') return;
+  const envPath = path.join(frontend, ENV_EXAMPLE[stack]);
   if (!(await pathExists(envPath))) return;
 
   let env = await fs.readFile(envPath, 'utf8');
 
-  // Flip the provider selector. There is no public mirror to set: the
-  // boilerplate derives NEXT_PUBLIC_CMS_PROVIDER from this one in
-  // next.config.ts so the two cannot disagree.
-  env = env.replace(/^CMS_PROVIDER=none$/m, `CMS_PROVIDER=${adapter}`);
+  // Next derives NEXT_PUBLIC_CMS_PROVIDER in next.config.ts; Vue needs the
+  // build-time mirror set explicitly.
+  env = setEnvVar(env, 'CMS_PROVIDER', adapter);
+  if (stack === 'vue') env = setEnvVar(env, 'VITE_CMS_PROVIDER', adapter);
 
-  // Uncomment the credential lines for the chosen provider so they're ready to
-  // fill in. Each entry: the commented form (as shipped) → the active form.
-  const CREDENTIAL_LINES: Record<typeof adapter, string[]> = {
-    strapi: [
-      '# STRAPI_API_URL=http://localhost:1337',
-      '# NEXT_PUBLIC_STRAPI_API_URL=http://localhost:1337',
-      '# STRAPI_API_TOKEN=',
-    ],
-    prepr: ['# PREPR_ACCESS_TOKEN=your-prepr-graphql-token'],
-    contentful: [
-      '# CONTENTFUL_SPACE_ID=',
-      '# CONTENTFUL_ENVIRONMENT=master',
-      '# CONTENTFUL_CDA_TOKEN=        # Content Delivery API token (published content)',
-    ],
-    // The generic 'cms' provider has no boilerplate credential lines yet; it
-    // selects the provider but the user supplies connection details per the
-    // CMS README.
-    cms: [],
-  };
-  for (const commented of CREDENTIAL_LINES[adapter]) {
+  // Uncomment the chosen provider's credential lines, ready to fill in.
+  for (const commented of CMS_CREDENTIAL_LINES[stack][adapter] ?? []) {
     const active = commented.replace(/^# /, '');
     env = env.split(commented).join(active);
   }
+  // Preview secret stays a commented placeholder here; the real value goes in the gitignored env.
+  if (adapter === 'strapi') env = documentPreviewSecret(env);
 
   await fs.writeFile(envPath, env, 'utf8');
 }
@@ -503,11 +600,24 @@ async function applyFeatureEnv(frontend: string, config: ShopConfig): Promise<vo
   // dev database, and writing those values into a scaffold would point a fresh
   // shop at a server that does not exist. Alone, TRACKING_ENABLED collects
   // nothing until TRACKING_DB_* is set, which is what the next-steps text says.
+  // Vue and Nuxt also need their build-time client switch on.
+  const publicTrackingVar = PUBLIC_TRACKING_VAR[config.stack];
   if (config.tracking) {
     env = setEnvVar(env, 'TRACKING_ENABLED', 'true');
+    if (publicTrackingVar) env = setEnvVar(env, publicTrackingVar, 'true');
   } else {
-    env = removeEnvKeys(env, (key) => key.startsWith('TRACKING_'));
+    env = removeEnvKeys(
+      env,
+      (key) => key.startsWith('TRACKING_') || key.startsWith('TRACKER_') || key === publicTrackingVar
+    );
   }
+
+  // Shop identity from the prompts; appended when an older example lacks the key.
+  for (const key of PORTAL_MODE_VARS[config.stack]) {
+    env = ensureEnvVar(env, key, config.portalMode);
+  }
+  env = ensureEnvVar(env, SITE_URL_VAR[config.stack], config.siteUrl);
+  env = ensureEnvVar(env, CURRENCY_CODE_VAR[config.stack], config.currencyCode);
 
   await fs.writeFile(envPath, env, 'utf8');
 }

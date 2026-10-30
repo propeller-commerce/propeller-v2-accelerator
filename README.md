@@ -109,18 +109,20 @@ VAT toggle is **always present and defaults to gross**, regardless of mode.
 ## CMS
 
 `--cms=<provider>` picks the CMS backend. Accepted values: `strapi`, `prepr`,
-`contentful`, `cms` (generic Propeller CMS), or `none`.
+`contentful`, or `none`; anything else is rejected.
 
-**CMS is a Next-only capability.** Only the Next boilerplate ships a CMS engine
-(`lib/cms`, with all providers built in); Vue and Nuxt have none. Passing
-`--cms=<x>` to a Vue or Nuxt scaffold prints a notice and proceeds with no CMS.
+**CMS is available on Next and Vue.** Next ships Strapi, Prepr and Contentful
+providers in `lib/cms`; Vue ships Strapi and Prepr in `src/lib/cms`. Nuxt has no
+CMS engine: `--cms=<x>` on a Nuxt scaffold prints a notice and proceeds with no
+CMS. With `--cms=strapi` the boilerplate's Strapi app (content types and seed
+script included) lands in `my-shop/cms/`.
 
 **There is no adapter package to install.** Every provider already ships in the
-Next boilerplate's `lib/cms` and is selected at runtime from the `CMS_PROVIDER`
+boilerplate's `lib/cms` and is selected at runtime from the `CMS_PROVIDER`
 env var. When you scaffold with a CMS, the CLI:
 
-- sets `CMS_PROVIDER=<provider>` in the shop's
-  `.env.local.example` and uncomments that provider's credential lines, so the
+- sets `CMS_PROVIDER=<provider>` in the shop's env example
+  (`.env.local.example` / `.env.example`) and uncomments that provider's credential lines, so the
   built-in provider is wired and you can see exactly what to fill in;
 - writes `my-shop/cms/README.md` with backend-specific setup steps;
 - records `cms.adapter` in `propeller.json` so `propeller doctor` can verify the

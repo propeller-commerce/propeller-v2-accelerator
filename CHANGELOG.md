@@ -6,6 +6,94 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-30
+
+### Added
+
+- **Strapi side-by-side preview works out of the box for `--cms=strapi`.**
+  The scaffold generates one random preview secret per shop and creates the
+  gitignored `cms/.env` from `cms/.env.example` with fresh values for every
+  `tobemodified` placeholder (four `APP_KEYS`, salts, JWT secrets,
+  `ENCRYPTION_KEY`), `PREVIEW_SECRET` and `CLIENT_URL` set to the storefront's
+  dev URL (Next `http://localhost:3000`, Vue `http://localhost:5173`, also
+  written to `cms/.env.example`). The secret never lands in an `*.example`
+  file: the frontend env example documents a commented
+  `# STRAPI_PREVIEW_SECRET=`, and since the CLI does not create the frontend's
+  real env file, the next steps print the exact `STRAPI_PREVIEW_SECRET=` line
+  to add to `.env.local` (Next) or `.env` (Vue). The generated `cms/README.md`
+  gains a Preview section.
+- **`propeller doctor` checks the Strapi preview secret.** With
+  `cms.adapter: strapi` it compares `PREVIEW_SECRET` in `cms/.env` with
+  `STRAPI_PREVIEW_SECRET` in the frontend's active env (`.env.local` /
+  `.env`): a warning when either is missing (preview is off), a failure when
+  both are set but differ. Values are never printed. Covered by
+  `scripts/check-doctor-config.mjs`.
+
+### Changed
+
+- **`--cms=cms` is rejected (PWP-1080).** The "Generic Propeller CMS" choice
+  wrote `CMS_PROVIDER=cms`, which no boilerplate accepts — the Next app
+  refused to start with "Unknown CMS provider: cms". The choice is gone from the
+  prompt, the `--cms` help and the credential map, and the flag now fails with
+  the supported values (`strapi`, `prepr`, `contentful`, `none`). An existing
+  `propeller.json` with `cms.adapter: "cms"` still parses; `doctor` warns about
+  it. The dead install-guide link and the recommendation to pick `cms` are gone
+  from the generated `cms/README.md`.
+- **Vue shops can use a CMS (PWP-1083).** `--stack=vue --cms=strapi|prepr` was
+  forced to no CMS although the Vue boilerplate ships a Strapi + Prepr engine in
+  `src/lib/cms`. Those choices now keep the CMS page, blog views and their
+  routes, and set `CMS_PROVIDER` (plus `VITE_CMS_PROVIDER`) and the provider's
+  credential lines in `.env.example`. The no-CMS slice runs only for
+  `--cms=none`. `--cms=contentful` on Vue fails with the values Vue supports.
+  Nuxt has no CMS engine, so it still scaffolds without one, now with an
+  accurate notice.
+- **`--cms=strapi` ships the Strapi app.** The root `cms/` folder used to get
+  only a README telling the user to run `npx create-strapi-app`, a blank Strapi
+  without the content types the provider reads, while the boilerplate's real
+  app stayed at `frontend/cms`. Next shops now get that app moved to `cms/`;
+  Vue shops get the same app from the Next boilerplate. The README covers
+  install, `npm run develop` and the seed script, with the Strapi reference
+  kept below. A Next shop on Prepr or Contentful no longer carries the unused
+  Strapi app in `frontend/cms`. Env files are now skipped at every depth when
+  copying a boilerplate, and every `.env*` file except `*.example` is skipped
+  (backups such as `.env.bak` included), so a local checkout's real env files
+  are never copied.
+- **`--tracking` applies to every stack.** It was ignored for Vue and Nuxt on
+  the claim that only Next ships `/tracker`; both do. Vue and Nuxt also get
+  their client switch (`VITE_TRACKING_ENABLED` / `NUXT_PUBLIC_TRACKING_ENABLED`)
+  turned on, and `--tracking=no` strips it with the rest of the section. The
+  next steps now say that `/tracker` needs `TRACKER_ACCESS_SECRET`.
+
+### Fixed
+
+- **Portal mode, site URL and currency code reach the env example
+  (PWP-1081).** The prompts recorded them in `propeller.json` only, so every
+  shop ran `open` on `https://shop.example.com` in `EUR` whatever was chosen.
+  They are now written per stack: `NEXT_PUBLIC_PORTAL_MODE` /
+  `NEXT_PUBLIC_SITE_URL` / `NEXT_PUBLIC_CURRENCY_CODE` (Next), the `VITE_`
+  equivalents (Vue), and `BOILERPLATE_PORTAL_MODE` + `NUXT_PUBLIC_PORTAL_MODE`
+  / `NUXT_PUBLIC_SITE_URL` / `NUXT_PUBLIC_CURRENCY_CODE` (Nuxt).
+- **`doctor` checks the portal mode the shop actually runs (PWP-1081).** It
+  passed whenever `config.ts` contained the text `'semi-closed'`, which it
+  always does. It now compares the portal-mode var(s) in the active env file
+  (falling back to the example) with `shop.portalMode` and fails on a mismatch.
+- **`doctor` checks the Propeller packages again (PWP-1082).** The dependency
+  check matched `propeller-v2-*`, which no scoped package does, so it checked
+  nothing. It now checks every `@propeller-commerce/*` dependency and warns when
+  none is declared.
+- **`doctor` knows Vue's CMS layout (PWP-1083)** — `src/lib/cms` and
+  `.env` / `.env.example` instead of Next's paths.
+- **The generated README keeps the boilerplate's (PWP-1084).** It replaced the
+  boilerplate README, losing the tracking, GA4 / GTM and PunchOut sections. The
+  shop summary now sits on top with the full boilerplate README below it. The
+  layout section only appears for shops that have a `cms/` folder.
+- **Scoped package names in the docs (PWP-1087).** `npx create-propeller-shop`
+  and `npx propeller doctor` do not resolve; the docs now use
+  `npx @propeller-commerce/create-propeller-shop@latest` and `npm run doctor`
+  (or `npx -y -p @propeller-commerce/create-propeller-shop propeller doctor`).
+- **The `cms-adapter-*` folders are described as unpublished legacy ports
+  (PWP-1088)**, not as packages a shop installs.
+
 ## [0.11.2] - 2026-09-25
 
 ### Fixed
