@@ -1,6 +1,6 @@
 {
-  "_comment": "Paths (relative to the scaffolded shop root = the boilerplate's frontend/) to delete when --punchout=no (the default). Unlike the PSP opt-out, punchout CAN be fully removed on Vue: server.js's punchout import + route block is one self-contained span (patched out by overlay-no-punchout/server.js.textpatch.json), so the glue module here goes with it. The package dep is dropped by package.patch.json; the CartView transfer form is patched out.",
+  "_comment": "Paths (relative to the scaffolded shop root = the boilerplate's frontend/) to delete when --punchout=no (the default). server.js's punchout package import and its /api/punchout/* route block are patched out by overlay-no-punchout/server.js.textpatch.json. src/server/punchout.js is NOT deleted: since the 2026-11 security fixes the GraphQL proxy and logout in server.js reference it too, so overlay-no-punchout/ replaces it with a stub (isPunchoutEnabled() → false) instead. Its unit test exercises the real module, so it goes. The package dep is dropped by package.patch.json; the CartView transfer form is patched out.",
   "remove": [
-    "src/server/punchout.js"
+    "src/server/punchout.test.js"
   ]
 }

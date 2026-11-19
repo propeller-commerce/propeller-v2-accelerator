@@ -1,0 +1,12 @@
+{
+  "_comment": "--psp=mollie: the MultiSafepay package is not installed, but server.js imports its webhook signature check straight from it. Point that import at the msp.js stub this overlay ships (which reports MSP as not configured), in one import line the stub fully serves. Alternatives: [0] = boilerplate after the 2026-11 security fixes, [1] = before (drop once the public mirror has the fixes).",
+  "replace": [
+    {
+      "find": [
+        "import { getMspProvider, isMspEnabled, mspApiKey } from './src/server/msp.js'\nimport { verifyWebhookSignature } from '@propeller-commerce/propeller-v2-msp'\n",
+        "import { getMspProvider, isMspEnabled } from './src/server/msp.js'\n"
+      ],
+      "with": "import { getMspProvider, isMspEnabled, mspApiKey, verifyWebhookSignature } from './src/server/msp.js'\n"
+    }
+  ]
+}

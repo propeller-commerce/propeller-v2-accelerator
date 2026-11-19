@@ -1,7 +1,6 @@
 {
-  "_comment": "Paths (relative to the scaffolded shop root) to delete when --punchout=no (the default). Nitro is file-routed, so deleting the server/api/punchout/* handlers removes the endpoints cleanly; server/utils/punchout.ts is auto-imported but only the deleted routes use it, so it goes too. The package dep is dropped by overlay-no-punchout/package.patch.json; nuxt.config.ts runtimeConfig keys and the cart transfer form are patched out.",
+  "_comment": "Paths (relative to the scaffolded shop root) to delete when --punchout=no (the default). Nitro is file-routed, so deleting the server/api/punchout/* handlers removes the endpoints cleanly. server/utils/punchout.ts is NOT deleted: since the 2026-11 security fixes the auth session routes and the GraphQL proxy import from it too, so overlay-no-punchout/ replaces it with a no-op stub. server/utils/punchoutSession.ts stays as-is (package-free; the proxy uses its magic-token parsing). The package dep is dropped by overlay-no-punchout/package.patch.json; nuxt.config.ts runtimeConfig keys and the cart transfer form are patched out.",
   "remove": [
-    "server/api/punchout",
-    "server/utils/punchout.ts"
+    "server/api/punchout"
   ]
 }

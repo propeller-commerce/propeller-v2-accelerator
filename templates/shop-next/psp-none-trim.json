@@ -1,9 +1,11 @@
 {
-  "_comment": "Paths (relative to the scaffolded shop root) to delete when psp === null (--psp=none). The boilerplate ships BOTH payment integrations (Mollie + MultiSafepay) and activates one at runtime via PAYMENT_PROVIDER; a shop with no PSP needs neither. Removed: the host route handlers and the server-side provider wiring — i.e. every file that imports a PSP npm package. NOT removed: lib/payments.ts (its `isOnAccountMethod` + `activePspProvider` are what the checkout uses to take the no-PSP path — with the env keys gone, activePspProvider() returns null and checkout places the order straight to NEW). The PSP packages themselves are dropped from package.json by overlay-psp-none/package.patch.json.",
+  "_comment": "Paths (relative to the scaffolded shop root) to delete when psp === null (--psp=none). The boilerplate ships BOTH payment integrations (Mollie + MultiSafepay) and activates one at runtime via PAYMENT_PROVIDER; a shop with no PSP needs neither. Removed: the host route handlers and the server-side provider wiring — i.e. every file that imports a PSP npm package. NOT removed: lib/payments.ts (its `isOnAccountMethod` + `activePspProvider` are what the checkout uses to take the no-PSP path — with the env keys gone, activePspProvider() returns null and checkout places the order straight to NEW). The PSP packages themselves are dropped from package.json by overlay-psp-none/package.patch.json. lib/psp/mspNotifications.ts is the MSP webhook's helper (only app/api/msp imports it) and its test imports the MSP package, so both go with the MSP half; the rest of lib/psp (handlers, orderAccess) is provider-agnostic and stays.",
   "remove": [
     "app/api/mollie",
     "app/api/msp",
     "lib/mollie.ts",
-    "lib/msp.ts"
+    "lib/msp.ts",
+    "lib/psp/mspNotifications.ts",
+    "lib/psp/mspNotifications.test.ts"
   ]
 }

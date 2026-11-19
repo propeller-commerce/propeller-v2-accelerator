@@ -4,7 +4,53 @@ All notable changes to `propeller-v2-accelerator` are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.13.0] - 2026-11-19
+
+### Fixed
+
+- **Scaffolds work against the boilerplates' 2026-11 security fixes.** Those
+  branches rewrote code that several slices patch or delete, so `check_anchors`
+  failed on Vue and Nuxt and some variants would no longer build. Every changed
+  anchor lists the new form first and keeps the old one, so the same CLI
+  scaffolds both the current boilerplate `master` and the security branches.
+  - Vue `--punchout=no`: the GraphQL proxy and logout in `server.js` now use the
+    punchout glue too. `src/server/punchout.js` becomes an inert stub
+    (`isPunchoutEnabled()` is false) instead of being deleted, the glue import
+    is narrowed to what the stub serves, and the `/api/punchout/*` route block
+    is removed by its section headers (`until`, below) rather than a 150-line
+    verbatim copy. The real module's unit test is deleted with it.
+  - Vue `--psp=mollie|none`: `server.js` now imports the MultiSafepay webhook
+    signature check straight from the package the slice uninstalls, and
+    `mspApiKey` from `msp.js`. Both now come from the `msp.js` stub, so the
+    server boots again.
+  - Nuxt `--psp=multisafepay`: the new `server/utils/paymentAccess.ts` imports
+    `isOnAccountMethod` from `utils/mollie`. Instead of deleting that file and
+    repointing one route's import, the slice now replaces it with a stub that
+    keeps only `isOnAccountMethod`, which covers both boilerplate states.
+    `--psp=none` also deletes `paymentAccess.ts`.
+  - Nuxt `--punchout=no`: the auth session routes and the GraphQL proxy import
+    from `server/utils/punchout.ts`, so it becomes a no-op stub instead of being
+    deleted; the new `punchoutHookHosts` runtimeConfig key is removed with the
+    other punchout keys.
+  - Next `--psp=mollie|none`: `lib/psp/mspNotifications.ts` and its test (which
+    imports the MultiSafepay package) go with the MSP half.
+  - Next `--cms=none`: the new `app/api/cms` route (imports `lib/cms`) is
+    deleted. `proxy.ts`'s `@/lib/cms/preview` import, which had broken every
+    Next `--cms=none` build since the boilerplate's 2026-10-30 Strapi preview
+    work, is replaced by the no-CMS answer (`frame-ancestors 'none'`).
+- **A local boilerplate override that is a git worktree no longer receives the
+  shop's baseline commit.** In a worktree (or submodule) `.git` is a file
+  pointing at the source repository, and the copy only skipped a `.git`
+  directory. The copied file made the scaffold's `git init` + baseline commit
+  write into the boilerplate repository (onto the worktree's HEAD and index)
+  instead of creating the shop's own. `.git` is now skipped whatever its type.
+
+### Added
+
+- **Span text patches.** A `*.textpatch.json` op may carry `until` (a string or
+  alternatives): it then replaces from the `find` match up to, not including,
+  the first `until` match after it. `propeller check-anchors` and
+  `check:textpatches` treat a missing end marker as stale.
 
 ## [0.12.0] - 2026-10-30
 

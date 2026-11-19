@@ -36,7 +36,10 @@ Each template directory contains:
   surgical find/replace to a source file (so a one-line edit doesn't freeze a
   whole file against future boilerplate changes). A `*.textpatch.json` anchor is
   matched **literally** — it is a verbatim copy of boilerplate source, so Vue's
-  `{{ … }}` interpolation is safe inside it.
+  `{{ … }}` interpolation is safe inside it. An op with an `until` marker
+  replaces the span from `find` up to that marker, so a delimited block (one
+  section-header comment to the next) goes with two short anchors instead of a
+  verbatim copy that breaks on any edit inside it.
 - `overlay-no-cms/…` — CMS-free variants applied when `--cms=none`.
 - `overlay-psp-<none|mollie|multisafepay>/…` — applied for the chosen `--psp`;
   drops the unused PSP package(s) from `package.json` (and, in the Vue shop,
@@ -87,7 +90,11 @@ It runs in CI's `verify` stage and again from the CLI's `prepublishOnly`, so a
 release cannot ship a stale anchor. **Ordering note:** because it validates
 against the boilerplate's `master`, a patch that anchors to an unreleased
 boilerplate change will fail until that boilerplate reaches `master` — land the
-boilerplate first, or together.
+boilerplate first, or together. When a boilerplate branch rewrites an anchored
+line, give the op both forms as `find` alternatives (new first, sharing one
+`with`): then the accelerator release passes against the old `master` and the
+branch's `check_anchors` passes against the new CLI, in either order. Drop the
+old form once the mirror has the change.
 
 ## Scope
 
@@ -181,8 +188,10 @@ Express server, Nuxt Nitro endpoints.
 **Default is `no`.** Only e-procurement catalogues need PunchOut, so it's opt-in.
 A `--punchout=no` scaffold:
 
-- deletes the `/api/punchout/*` route handlers and the server glue
-  (`lib/punchout.ts` / `src/server/punchout.js` / `server/utils/punchout.ts`);
+- deletes the `/api/punchout/*` route handlers and, for Next, the server glue
+  (`lib/punchout.ts`). In Vue and Nuxt the login/logout and GraphQL proxy code
+  also calls into the glue (`src/server/punchout.js` / `server/utils/punchout.ts`),
+  so there it is replaced by an inert stub (no punchout session ever exists);
 - removes the punchout package from `package.json` **and** prunes it from
   `package-lock.json` so `npm ci` can't reinstall it;
 - patches the cart page back to a plain checkout surface (the "Transfer cart to

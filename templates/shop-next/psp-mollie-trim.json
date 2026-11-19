@@ -1,7 +1,9 @@
 {
-  "_comment": "Paths to delete when psp === 'mollie': the MultiSafepay half of the boilerplate's two-PSP surface. Its npm package is dropped from package.json by overlay-psp-mollie/package.patch.json. Nothing outside these files imports them — the Next PSP routes take `isOnAccountMethod` from the provider-agnostic lib/payments.ts, so the two providers are independent here.",
+  "_comment": "Paths to delete when psp === 'mollie': the MultiSafepay half of the boilerplate's two-PSP surface. Its npm package is dropped from package.json by overlay-psp-mollie/package.patch.json. Nothing outside these files imports them — the Next PSP routes take `isOnAccountMethod` from the provider-agnostic lib/payments.ts, so the two providers are independent here. lib/psp/mspNotifications.ts is the MSP webhook's helper (only app/api/msp imports it) and its test imports the MSP package, so both go with the MSP half; the rest of lib/psp (handlers, orderAccess) is provider-agnostic and stays.",
   "remove": [
     "app/api/msp",
-    "lib/msp.ts"
+    "lib/msp.ts",
+    "lib/psp/mspNotifications.ts",
+    "lib/psp/mspNotifications.test.ts"
   ]
 }

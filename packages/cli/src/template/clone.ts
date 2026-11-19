@@ -525,6 +525,10 @@ async function walkWithSkip(
     // (rare) doesn't get pruned. Env files are skipped at every depth: the
     // bundled Strapi app's `cms/.env` holds real secrets too.
     if (entry.isDirectory() && skipDirNames.has(entry.name)) continue;
+    // In a git worktree or submodule `.git` is a FILE pointing at the source
+    // repo's gitdir. Copied into the shop, the scaffold's `git init` + baseline
+    // commit would land in that source repo instead of a fresh one.
+    if (entry.name === '.git') continue;
     if (!entry.isDirectory() && isSkippedEnvFile(entry.name)) continue;
     const fullPath = path.join(here, entry.name);
     await visit({ fullPath, name: entry.name, isDirectory: entry.isDirectory() });

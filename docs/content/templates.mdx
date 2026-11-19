@@ -48,7 +48,7 @@ shops scaffolded in between silently got old code.
 | plain file | copied over the clone |
 | `*.template.*` | rendered with Handlebars, written without the `.template` suffix |
 | `*.patch.json` | deep-merged onto the clone's `<name>.json` (`null` deletes a key; a top-level `_comment` documents the patch and is dropped before merging) |
-| `*.textpatch.json` | surgical find/replace on a source file — **fails loudly** when the snippet is gone, so a moved boilerplate surfaces at scaffold time instead of shipping a broken shop |
+| `*.textpatch.json` | surgical find/replace on a source file — **fails loudly** when the snippet is gone, so a moved boilerplate surfaces at scaffold time instead of shipping a broken shop. An op with `until` replaces the span from `find` up to that marker (drop a delimited block with two short anchors) |
 
 Prefer a text patch over a whole-file overlay. A whole-file overlay freezes the
 accelerator's copy of a file against every later boilerplate edit; a text patch
@@ -79,9 +79,14 @@ stack ships only the halves it actually needs.
   route by deleting its file. Vue's router imports every view explicitly, so
   removing a view always needs a matching router patch — which is why
   `overlay-b2c/` and `overlay-no-machines/` exist for Vue.
-- **On-account guard.** `--psp=multisafepay` on Nuxt also ships
-  `server/utils/payments.ts` and repoints one import: upstream, the
-  provider-agnostic on-account check lives in the Mollie module.
+- **On-account guard.** `--psp=multisafepay` on Nuxt keeps
+  `server/utils/mollie.ts` as a stub holding only `isOnAccountMethod`: upstream,
+  that provider-agnostic check lives in the Mollie module and the MultiSafepay
+  flow imports it from there.
+- **PunchOut glue.** On Vue and Nuxt the login/logout and GraphQL proxy code
+  call into the punchout glue module, so `--punchout=no` replaces it with an
+  inert stub instead of deleting it. Next keeps that state in a separate,
+  package-free module, so its glue is deleted outright.
 
 ## Templated files (Handlebars)
 

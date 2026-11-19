@@ -31,6 +31,12 @@
  *     no ordering does that with a single anchor. List the new form first, keep
  *     the old until it is gone from the mirror, then drop it.
  *   - `with: ""` deletes the matched snippet.
+ *   - `until` (string or alternatives, optional) turns the op into a SPAN
+ *     replace: from the first `find` match up to — not including — the first
+ *     `until` match after it. Use it to drop a clearly delimited block (e.g.
+ *     everything from one section-header comment to the next) with two short
+ *     anchors instead of a verbatim copy of the whole block, which would go
+ *     stale on any edit inside it. Missing `until` after the start is stale too.
  *   - `with` is rendered through Handlebars first, so an inserted line can
  *     carry `{{shopName}}`. `find` is NOT rendered: an anchor is a verbatim
  *     copy of boilerplate source, and Vue's `{{ … }}` interpolation would
@@ -60,13 +66,39 @@ export function textPatchTargetName(name: string): string {
   return name.slice(0, -PATCH_SUFFIX.length);
 }
 
-interface TextPatchOp {
+export interface TextPatchOp {
   /**
    * The snippet to replace, or an ARRAY of alternatives of which the first one
    * present in the target wins. See the header note on release ordering.
    */
   find: string | string[];
+  /** Optional end marker (kept) — makes the op replace the span `find`…`until`. */
+  until?: string | string[];
   with: string;
+}
+
+const alternatives = (v: string | string[]): string[] =>
+  (Array.isArray(v) ? v : [v]).map((s) => s.replace(/\r\n/g, '\n'));
+
+/**
+ * Where an op applies in an LF-normalised `source`: the chosen `find`, and for a
+ * span op the `[start, end)` range up to the `until` marker. `null` when the op
+ * is stale (no `find` present, or no `until` after it). Shared with
+ * `propeller check-anchors` so both judge an anchor the same way.
+ */
+export function locateTextPatchOp(
+  source: string,
+  op: Pick<TextPatchOp, 'find' | 'until'>
+): { find: string; span?: [number, number] } | null {
+  const find = alternatives(op.find).find((c) => source.includes(c));
+  if (find === undefined) return null;
+  if (op.until === undefined) return { find };
+  const start = source.indexOf(find);
+  const from = start + find.length;
+  const ends = alternatives(op.until)
+    .map((u) => source.indexOf(u, from))
+    .filter((i) => i !== -1);
+  return ends.length > 0 ? { find, span: [start, Math.min(...ends)] } : null;
 }
 
 /**
@@ -115,23 +147,26 @@ export async function applyTextPatch(args: {
     // with `"punchoutIntro" not defined` the moment that block was localized
     //. `with` IS still rendered — that text is the author's, so
     // `{{shopName}}` in an inserted line keeps working.
-    const candidates = (Array.isArray(op.find) ? op.find : [op.find]).map((f) =>
-      f.replace(/\r\n/g, '\n')
-    );
     const replacement = renderTemplate(op.with, args.ctx).replace(/\r\n/g, '\n');
-    const find = candidates.find((c) => target.includes(c));
-    if (find === undefined) {
+    const hit = locateTextPatchOp(target, op);
+    if (hit === null) {
+      const candidates = alternatives(op.find);
+      const ends = op.until === undefined ? [] : alternatives(op.until);
       throw new Error(
         `Text patch ${path.basename(args.patchPath)} is stale: ` +
           (candidates.length > 1
             ? `none of its ${candidates.length} alternative snippets were found in `
             : `the snippet it expected to find in `) +
-          `${path.basename(args.targetPath)}. The boilerplate likely changed — ` +
+          `${path.basename(args.targetPath)}` +
+          (ends.length > 0 ? ' (or its `until` end marker after it)' : '') +
+          `. The boilerplate likely changed — ` +
           `update the patch.\nMissing snippet${candidates.length > 1 ? 's' : ''}:\n` +
-          candidates.join('\n  --- or ---\n')
+          [...candidates, ...ends.map((u) => `until: ${u}`)].join('\n  --- or ---\n')
       );
     }
-    target = target.split(find).join(replacement);
+    target = hit.span
+      ? target.slice(0, hit.span[0]) + replacement + target.slice(hit.span[1])
+      : target.split(hit.find).join(replacement);
   }
 
   const out = hadCrlf ? target.replace(/\n/g, '\r\n') : target;

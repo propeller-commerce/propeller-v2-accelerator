@@ -136,12 +136,20 @@ for (const [stack, spec] of Object.entries(STACKS)) {
         // is the stale case that breaks a scaffold.
         // `find` may list alternatives (see textPatch.ts) — first match wins, so
         // only "none of them matched" is stale.
-        const candidates = (Array.isArray(op.find) ? op.find : [op.find]).map((f) =>
-          f.replace(/\r\n/g, '\n')
-        );
-        if (!candidates.some((c) => source.includes(c))) {
+        // A span op (`until`, see textPatch.ts) also needs its end marker after
+        // the start. Mirrors `locateTextPatchOp` there.
+        const list = (v) => (Array.isArray(v) ? v : [v]).map((s) => s.replace(/\r\n/g, '\n'));
+        const candidates = list(op.find);
+        const start = candidates.find((c) => source.includes(c));
+        const found =
+          start !== undefined &&
+          (op.until === undefined ||
+            list(op.until).some((u) => source.includes(u, source.indexOf(start) + start.length)));
+        if (!found) {
           const firstLine = candidates[0].split('\n').find((l) => l.trim()) ?? '';
-          const alts = candidates.length > 1 ? ` (+${candidates.length - 1} alt)` : '';
+          const alts =
+            (candidates.length > 1 ? ` (+${candidates.length - 1} alt)` : '') +
+            (op.until !== undefined ? ' (or its until marker)' : '');
           console.error(
             `  x ${rel} op#${i} - anchor not found${alts}: ${firstLine.trim().slice(0, 80)}`
           );

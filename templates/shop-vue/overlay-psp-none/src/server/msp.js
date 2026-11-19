@@ -21,6 +21,20 @@ export function mspWebhookUrl() {
   return ''
 }
 
+/** Kept for signature parity with the boilerplate module. */
+export function mspApiKey() {
+  return ''
+}
+
+/**
+ * Stands in for the package's webhook signature check, which `server.js`
+ * imports from here in this shop (overlay-psp-none/server.js.textpatch.json).
+ * Never reached: the webhook guards with `isMspEnabled()` first.
+ */
+export function verifyWebhookSignature() {
+  return false
+}
+
 /** Never reached: every route guards with `isMspEnabled()` first. */
 export function getMspProvider() {
   throw new Error(

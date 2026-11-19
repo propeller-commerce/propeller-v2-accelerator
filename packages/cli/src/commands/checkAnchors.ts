@@ -26,6 +26,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { locateTextPatchOp, type TextPatchOp } from '../template/textPatch';
 
 /** Where the boilerplate's app root sits inside its repo. */
 const SUBPATH: Record<string, string> = { next: '.', vue: 'frontend', nuxt: '.' };
@@ -116,21 +117,19 @@ export function runCheckAnchors(options: CheckAnchorsOptions): number {
       continue;
     }
 
-    const patch = JSON.parse(readNormalised(patchPath)) as {
-      replace?: Array<{ find: string | string[] }>;
-    };
+    const patch = JSON.parse(readNormalised(patchPath)) as { replace?: TextPatchOp[] };
     for (const [i, op] of (patch.replace ?? []).entries()) {
       checked += 1;
       // Matching everywhere is intended (the applier replaces all occurrences);
       // matching NOWHERE is the drift this exists to catch. `find` may list
       // alternatives (see textPatch.ts) — the first present wins, so only
-      // "none of them matched" is drift.
-      const candidates = (Array.isArray(op.find) ? op.find : [op.find]).map((f) =>
-        f.replace(/\r\n/g, '\n')
-      );
-      if (!candidates.some((c) => source.includes(c))) {
+      // "none of them matched" is drift. A span op also needs its `until`.
+      if (locateTextPatchOp(source, op) === null) {
+        const candidates = Array.isArray(op.find) ? op.find : [op.find];
         const first = candidates[0].split('\n').find((l) => l.trim()) ?? candidates[0];
-        const alts = candidates.length > 1 ? ` (+${candidates.length - 1} alt)` : '';
+        const alts =
+          (candidates.length > 1 ? ` (+${candidates.length - 1} alt)` : '') +
+          (op.until !== undefined ? ' (or its until marker)' : '');
         // eslint-disable-next-line no-console
         console.error(
           `  x ${rel} op#${i} - anchor not found${alts}: ${first.trim().slice(0, 90)}`

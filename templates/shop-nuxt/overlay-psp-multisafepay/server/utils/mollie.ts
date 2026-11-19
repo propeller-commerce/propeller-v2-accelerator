@@ -1,11 +1,15 @@
 /**
- * Provider-agnostic payment helpers for the server side.
+ * Mollie wiring — REMOVED (this shop was scaffolded with `--psp=multisafepay`).
  *
- * In the boilerplate this lives in `server/utils/mollie.ts` alongside the Mollie
- * wiring, and BOTH create-payment routes import it. This shop was scaffolded
- * with `--psp=multisafepay`, so the Mollie module (and its npm package) is gone
- * — the helper moves here, and the MultiSafepay route's import is repointed at
- * this file.
+ * The `/api/mollie/*` routes and the `@propeller-commerce/propeller-v2-mollie`
+ * package are gone. This file stays for one helper: `isOnAccountMethod` is
+ * provider-agnostic but lives in the boilerplate's Mollie module, and the
+ * MultiSafepay payment flow imports it from here (`server/utils/paymentAccess.ts`,
+ * or `server/api/msp/create-payment.post.ts` in older boilerplates).
+ *
+ * To switch to Mollie later: `npm i @propeller-commerce/propeller-v2-mollie`,
+ * restore this file and `server/api/mollie/` from the boilerplate
+ * (propeller-v2-nuxt-boilerplate), and set PAYMENT_PROVIDER=mollie.
  *
  * Server-only, like everything under `server/`.
  */

@@ -173,6 +173,28 @@ try {
     console.error(`FAIL  --cms=cms should be rejected (exit ${reject.code})\n${reject.out}`);
     failures++;
   }
+
+  // check-anchors on a span op (`until`): the end marker must follow the start.
+  const span = path.join(ROOT, 'span');
+  const templates = path.join(span, 'templates');
+  mkdirSync(path.join(templates, 'shop-next', 'overlay-x'), { recursive: true });
+  writeFileSync(
+    path.join(templates, 'shop-next', 'overlay-x', 'a.ts.textpatch.json'),
+    JSON.stringify({ replace: [{ find: '// begin', until: ['// gone', '// end'], with: '' }] })
+  );
+  for (const [name, body, ok] of [
+    ['span-ok', 'x\n// begin\nstuff\n// end\ny\n', true],
+    ['span-stale', 'x\n// end\n// begin\nstuff\n', false],
+  ]) {
+    mkdirSync(path.join(span, name), { recursive: true });
+    writeFileSync(path.join(span, name, 'a.ts'), body);
+    const r = run('propeller.js', ['check-anchors', '--stack', 'next', '--boilerplate', path.join(span, name), '--templates', templates], ROOT);
+    if ((r.code === 0) === ok) console.log(`ok    check-anchors ${name}`);
+    else {
+      console.error(`FAIL  check-anchors ${name} (exit ${r.code})\n${r.out}`);
+      failures++;
+    }
+  }
 } finally {
   rmSync(ROOT, { recursive: true, force: true });
 }
